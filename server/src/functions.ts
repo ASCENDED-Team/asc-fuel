@@ -31,6 +31,7 @@ export async function updateFuelConsumption(player: alt.Player) {
 
     const currentPos = vehicle.pos;
     
+    // TODO: Replace by Utility Core Function (Soon?)
     const distance = Math.sqrt(
         Math.pow(currentPos.x - initialPos.x, 2) +
         Math.pow(currentPos.y - initialPos.y, 2) +
@@ -80,18 +81,19 @@ export async function setVehicleConsumptionRates() {
     const database = Rebar.database.useDatabase();
     const allVehicles = await database.getAll('Vehicles');
 
-    const consumptionRates = VEHICLE_CONSUMPTION.reduce((acc, { model, consume }) => {
-        acc[model] = consume;
+    const consumptionData = VEHICLE_CONSUMPTION.reduce((acc, { model, consume, maxFuel }) => {
+        acc[model] = { consume, maxFuel };
         return acc;
     }, {});
 
     for (const veh of allVehicles) {
         const partialVehicle: Partial<Vehicle> = { _id: veh._id };
         const dbVehicle = await database.get<Vehicle>(partialVehicle, 'Vehicles');
-        const rate = consumptionRates[dbVehicle.model];
+        const data = consumptionData[dbVehicle.model];
 
-        if (rate) {
-            dbVehicle.consumptionRate = rate;
+        if (data) {
+            dbVehicle.consumptionRate = data.consume;
+            dbVehicle.maxFuel = data.maxFuel;
             try {
                 await database.update(dbVehicle, 'Vehicles');
             } catch (error) {
@@ -99,8 +101,9 @@ export async function setVehicleConsumptionRates() {
             }
         } else {
             dbVehicle.consumptionRate = Default_Consumption;
+            dbVehicle.maxFuel = 60; 
             await database.update(dbVehicle, 'Vehicles');
-            console.warn(`No consumption rate found for fuel type ${dbVehicle.fuelType} of vehicle model ${dbVehicle.model}. Stored to Database.`);
+            console.warn(`No consumption data found for vehicle model ${dbVehicle.model}. Stored default values to Database.`);
         }
     }
 }
@@ -109,12 +112,12 @@ export async function getVehicleFuelConsumption(model: string | number) {
     if(typeof model === 'string') {
         alt.hash(model);
     }
-    
+
     const dbVehicle = await database.get<Vehicle>({ 'model': model }, 'Vehicles');
 
     return dbVehicle.consumptionRate;
 };
 
 export async function refillVehicle() {
-
+    // TODO: Implement Functionality for Usage with API
 }

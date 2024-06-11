@@ -8,6 +8,7 @@ const Rebar = useRebar();
 const database = Rebar.database.useDatabase();
 
 const vehicleData = new Map();
+const NotificationAPI = await Rebar.useApi().getAsync('ascended-notification-api');
 
 export function startTracking(player: alt.Player) {
     const vehicle = player.vehicle;
@@ -70,7 +71,7 @@ export async function setVehicleFuelTypes() {
 }
 
 export async function getVehicleFuelType(model: string) {
-    const dbVehicle = await database.get<Vehicle>({ 'model': model }, 'Vehicles');
+    const dbVehicle = await database.get<Vehicle>({ 'model': alt.hash(model) }, 'Vehicles');
 
     return dbVehicle.fuelType;
 }
@@ -109,3 +110,7 @@ export async function getVehicleFuelConsumption(model: string | number) {
 
     return dbVehicle.consumptionRate;
 };
+
+export async function refillVehicle() {
+
+}

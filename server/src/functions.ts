@@ -106,6 +106,10 @@ export async function setVehicleConsumptionRates() {
 }
 
 export async function getVehicleFuelConsumption(model: string | number) {
+    if(typeof model === 'string') {
+        alt.hash(model);
+    }
+    
     const dbVehicle = await database.get<Vehicle>({ 'model': model }, 'Vehicles');
 
     return dbVehicle.consumptionRate;

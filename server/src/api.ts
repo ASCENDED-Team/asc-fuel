@@ -1,22 +1,32 @@
 import * as alt from 'alt-server';
 
 import { useApi } from '@Server/api/index.js';
-import { getVehicleFuelConsumption, getVehicleFuelType, refillVehicle } from './functions.js';
+import { getVehicleFuelConsumption, getVehicleFuelType, refillVehicle, setVehicleConsumptionRates, setVehicleFuelTypes } from './functions.js';
 
 function useFuelAPI() {
-    function getFuelType(model: string) {
-        getVehicleFuelType(model)
+    async function setFuelTypes() {
+        await setVehicleFuelTypes();
     }
 
-    function getFuelConsumption(model: string) {
-        getVehicleFuelConsumption(model);
+    async function setConsumptionRates() {
+        await setVehicleConsumptionRates();
     }
 
-    function refill(player: alt.Player) {
-        refillVehicle(player);
+    async function getFuelType(model: string) {
+        await getVehicleFuelType(model)
+    }
+
+    async function getFuelConsumption(model: string) {
+        await getVehicleFuelConsumption(model);
+    }
+
+    async function refill(player: alt.Player) {
+        await refillVehicle(player);
     } 
 
     return {
+        setFuelTypes,
+        setConsumptionRates,
         getFuelType,
         getFuelConsumption,
         refill

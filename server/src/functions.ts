@@ -16,7 +16,7 @@ export function startTracking(player: alt.Player) {
     vehicleData.set(vehicle.id, {
         position: vehicle.pos,
         fuel: Rebar.document.vehicle.useVehicle(vehicle).get().fuel,
-        consumptionRate: Rebar.document.vehicle.useVehicle(vehicle).get().consumptionRate,
+        consumptionRate: Rebar.document.vehicle.useVehicle(vehicle).get().ascendedFuel.consumption,
         timestamp: Date.now()
     });
 }
@@ -82,7 +82,7 @@ export async function setVehicleFuelTypes() {
             const dbVehicle = await database.get<Vehicle>({ 'model': alt.hash(veh.model) }, 'Vehicles');
 
             if (dbVehicle) {
-                dbVehicle.fuelType = veh.fuelType;
+                dbVehicle.ascendedFuel.type = veh.fuelType;
                 await database.update(dbVehicle, 'Vehicles');
             }
         } catch (error) {
@@ -94,7 +94,7 @@ export async function setVehicleFuelTypes() {
 export async function getVehicleFuelType(model: string) {
     const dbVehicle = await database.get<Vehicle>({ 'model': alt.hash(model) }, 'Vehicles');
 
-    return dbVehicle.fuelType;
+    return dbVehicle.ascendedFuel.type;
 }
 
 export async function setVehicleConsumptionRates() {
@@ -112,16 +112,17 @@ export async function setVehicleConsumptionRates() {
         const data = consumptionData[dbVehicle.model];
 
         if (data) {
-            dbVehicle.consumptionRate = data.consume;
-            dbVehicle.maxFuel = data.maxFuel;
+            dbVehicle.ascendedFuel.consumption = data.consume;
+            dbVehicle.ascendedFuel.max = data.maxFuel;
             try {
                 await database.update(dbVehicle, 'Vehicles');
             } catch (error) {
                 console.error(`Failed to update vehicle model ${dbVehicle.model}:`, error);
             }
         } else {
-            dbVehicle.consumptionRate = FUEL_SETTINGS.DefaultConsumption;
-            dbVehicle.maxFuel = 60; 
+            dbVehicle.ascendedFuel.type = FUEL_SETTINGS.DefaultFuel;
+            dbVehicle.ascendedFuel.consumption = FUEL_SETTINGS.DefaultConsumption;
+            dbVehicle.ascendedFuel.max = 60; 
             await database.update(dbVehicle, 'Vehicles');
             console.warn(`No consumption data found for vehicle model ${dbVehicle.model}. Stored default values to Database.`);
         }
@@ -135,7 +136,7 @@ export async function getVehicleFuelConsumption(model: string | number) {
 
     const dbVehicle = await database.get<Vehicle>({ 'model': model }, 'Vehicles');
 
-    return dbVehicle.consumptionRate;
+    return dbVehicle.ascendedFuel.consumption;
 };
 
 export async function getVehicleMaxFuel(model: string | number) {
@@ -145,7 +146,7 @@ export async function getVehicleMaxFuel(model: string | number) {
 
     const dbVehicle = await database.get<Vehicle>({ 'model': model }, 'Vehicles');
 
-    return dbVehicle.maxFuel;
+    return dbVehicle.ascendedFuel.max;
 }
 
 export async function getVehicleFuel(model: string | number) {    
@@ -161,16 +162,16 @@ export async function getVehicleFuel(model: string | number) {
 export async function refillVehicle(player: alt.Player) {
     const document = Rebar.document.vehicle.useVehicle(player.vehicle).get();
 
-    Rebar.document.vehicle.useVehicle(player.vehicle).set('fuel', document.maxFuel);
+    Rebar.document.vehicle.useVehicle(player.vehicle).set('fuel', document.ascendedFuel.max);
 
     await database.update(document, 'Vehicles');
 
-    console.log(`Refilled Vehicle: ${document.model} to ${document.maxFuel} - New Fuel is: ${document.fuel}`);
+    console.log(`Refilled Vehicle: ${document.model} to ${document.ascendedFuel.max} - New Fuel is: ${document.fuel}`);
 
     vehicleData.set(player.vehicle.id, {
         position: player.vehicle.pos,
-        fuel: document.maxFuel,
-        consumptionRate: Rebar.document.vehicle.useVehicle(player.vehicle).get().consumptionRate,
+        fuel: document.ascendedFuel.max,
+        consumptionRate:document.ascendedFuel.consumption,
         timestamp: Date.now()
     });
 

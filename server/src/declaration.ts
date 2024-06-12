@@ -1,7 +1,9 @@
 declare module '@Shared/types/vehicle.js' {
     export interface Vehicle {
-        fuelType: string;
-        consumptionRate: number;
-        maxFuel: number;
+        ascendedFuel: {
+            type: string;
+            consumption: number;
+            max: number;
+        }
     }
 }

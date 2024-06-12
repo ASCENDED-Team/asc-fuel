@@ -2,6 +2,8 @@ import * as alt from 'alt-server';
 import { FUEL_TYPES } from "./fuelTypes.js";
 
 export const FUEL_SETTINGS = {
+    AscHUD: true,
+    Debug: true,
     DefaultConsumption: 0.003,
     DefaultFuel: FUEL_TYPES.Diesel,
 }
@@ -14,7 +16,7 @@ export const VEHICLE_CONSUMPTION: Array<{ model: number, consume: number, maxFue
     { model: alt.hash('krieger'), consume: 0.01, maxFuel: 50 }
 ]
 
-export const GASOLIN = ['sultanrs', 't20', 'krieger'];
+export const GASOLIN = ['sultanrs', 't20', 'krieger', 'zentorno'];
 
 export const KEROSIN = ['maverick'];
 

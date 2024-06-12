@@ -1,6 +1,6 @@
 import * as alt from 'alt-server';
 import { useRebar } from '@Server/index.js';
-import { Default_Consumption, GASOLIN, KEROSIN, VEHICLE_CONSUMPTION } from './config.js';
+import { DIESEL, ELECTRIC, FUEL_SETTINGS, GASOLIN, KEROSIN, VEHICLE_CONSUMPTION } from './config.js';
 import { Vehicle } from '@Shared/types/vehicle.js';
 import { FUEL_TYPES } from './fuelTypes.js';
 
@@ -8,7 +8,6 @@ const Rebar = useRebar();
 const database = Rebar.database.useDatabase();
 
 const vehicleData = new Map();
-const NotificationAPI = await Rebar.useApi().getAsync('ascended-notification-api');
 
 export function startTracking(player: alt.Player) {
     const vehicle = player.vehicle;
@@ -18,43 +17,64 @@ export function startTracking(player: alt.Player) {
         position: vehicle.pos,
         fuel: Rebar.document.vehicle.useVehicle(vehicle).get().fuel,
         consumptionRate: Rebar.document.vehicle.useVehicle(vehicle).get().consumptionRate,
+        timestamp: Date.now()
     });
 }
 
-export async function updateFuelConsumption(player: alt.Player) {
+export async function updateFuelConsumption(player: alt.Player): Promise<void> {
     const vehicle = player.vehicle;
     if (!vehicle || !vehicleData.has(vehicle.id)) return;
 
-    const initialData = vehicleData.get(vehicle.id);
+    const initialData = vehicleData.get(vehicle.id)!;
     const initialPos = initialData.position;
     const initialFuel = initialData.fuel;
+    const initialTime = initialData.timestamp;
 
     const currentPos = vehicle.pos;
-    
-    // TODO: Replace by Utility Core Function (Soon?)
+    const currentTime = Date.now();
+
     const distance = Math.sqrt(
         Math.pow(currentPos.x - initialPos.x, 2) +
         Math.pow(currentPos.y - initialPos.y, 2) +
         Math.pow(currentPos.z - initialPos.z, 2)
     );
 
-    const fuelConsumptionRate = await getVehicleFuelConsumption(player.vehicle.model);
-    const fuelConsumed = distance * fuelConsumptionRate;
+    const timeElapsed = (currentTime - initialTime) / 1000;
+
+    if (timeElapsed <= 0) {
+        console.log('Time elapsed is zero or negative, skipping fuel consumption update.');
+        return;
+    }
+
+    const speed = distance / timeElapsed;
+
+    if (distance === 0 || speed === 0) {
+        return;
+    }
+
+    const baseFuelConsumptionRate = await getVehicleFuelConsumption(vehicle.model);
+    const adjustedFuelConsumptionRate = baseFuelConsumptionRate * (1 + speed / 100);
+    const fuelConsumed = distance * adjustedFuelConsumptionRate;
 
     const remainingFuel = Math.max(0, initialFuel - fuelConsumed);
-    Rebar.document.vehicle.useVehicle(vehicle).set('fuel', remainingFuel);
 
-    console.log(`Distance: ${distance} | Fuel: ${Rebar.document.vehicle.useVehicle(vehicle).get().fuel} | Consumption: ${fuelConsumptionRate} | Consumed: ${fuelConsumed}`)
-    vehicleData.set(vehicle.id, {
-        position: currentPos,
-        fuel: remainingFuel
-    });
+    if (speed > 0) {
+        Rebar.document.vehicle.useVehicle(vehicle).set('fuel', remainingFuel);
+        
+        vehicleData.set(vehicle.id, {
+            position: currentPos,
+            fuel: remainingFuel,
+            timestamp: currentTime
+        });
+    }
 }
 
 export async function setVehicleFuelTypes() {
     const fuelVehicles = [
         ...GASOLIN.map(vehicle => ({ model: vehicle, fuelType: FUEL_TYPES.Gasolin })),
-        ...KEROSIN.map(vehicle => ({ model: vehicle, fuelType: FUEL_TYPES.Kerosin }))
+        ...KEROSIN.map(vehicle => ({ model: vehicle, fuelType: FUEL_TYPES.Kerosin })),
+        ...DIESEL.map(vehicle => ({ model: vehicle, fuelType: FUEL_TYPES.Diesel })),
+        ...ELECTRIC.map(vehicle => ({ model: vehicle, fuelType: FUEL_TYPES.Electric }))
     ];
 
     for (const veh of fuelVehicles) {
@@ -100,7 +120,7 @@ export async function setVehicleConsumptionRates() {
                 console.error(`Failed to update vehicle model ${dbVehicle.model}:`, error);
             }
         } else {
-            dbVehicle.consumptionRate = Default_Consumption;
+            dbVehicle.consumptionRate = FUEL_SETTINGS.DefaultConsumption;
             dbVehicle.maxFuel = 60; 
             await database.update(dbVehicle, 'Vehicles');
             console.warn(`No consumption data found for vehicle model ${dbVehicle.model}. Stored default values to Database.`);
@@ -118,6 +138,41 @@ export async function getVehicleFuelConsumption(model: string | number) {
     return dbVehicle.consumptionRate;
 };
 
-export async function refillVehicle() {
-    // TODO: Implement Functionality for Usage with API
+export async function getVehicleMaxFuel(model: string | number) {
+    if(typeof model === 'string') {
+        alt.hash(model);
+    }
+
+    const dbVehicle = await database.get<Vehicle>({ 'model': model }, 'Vehicles');
+
+    return dbVehicle.maxFuel;
+}
+
+export async function getVehicleFuel(model: string | number) {    
+    if(typeof model === 'string') {
+        alt.hash(model);
+    }
+
+    const dbVehicle = await database.get<Vehicle>({ 'model': model }, 'Vehicles');
+
+    return dbVehicle.fuel;
+}
+
+export async function refillVehicle(player: alt.Player) {
+    const document = Rebar.document.vehicle.useVehicle(player.vehicle).get();
+
+    Rebar.document.vehicle.useVehicle(player.vehicle).set('fuel', document.maxFuel);
+
+    await database.update(document, 'Vehicles');
+
+    console.log(`Refilled Vehicle: ${document.model} to ${document.maxFuel} - New Fuel is: ${document.fuel}`);
+
+    vehicleData.set(player.vehicle.id, {
+        position: player.vehicle.pos,
+        fuel: document.maxFuel,
+        consumptionRate: Rebar.document.vehicle.useVehicle(player.vehicle).get().consumptionRate,
+        timestamp: Date.now()
+    });
+
+    updateFuelConsumption(player);
 }

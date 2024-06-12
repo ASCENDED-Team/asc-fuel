@@ -1,7 +1,7 @@
 import * as alt from 'alt-server';
 
 import { useApi } from '@Server/api/index.js';
-import { getVehicleFuelConsumption, getVehicleFuelType } from './functions.js';
+import { getVehicleFuelConsumption, getVehicleFuelType, refillVehicle } from './functions.js';
 
 function useFuelAPI() {
     function getFuelType(model: string) {
@@ -12,9 +12,14 @@ function useFuelAPI() {
         getVehicleFuelConsumption(model);
     }
 
+    function refill(player: alt.Player) {
+        refillVehicle(player);
+    } 
+
     return {
         getFuelType,
-        getFuelConsumption
+        getFuelConsumption,
+        refill
     }
 }
 

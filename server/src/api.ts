@@ -1,7 +1,7 @@
 import * as alt from 'alt-server';
 
 import { useApi } from '@Server/api/index.js';
-import { getVehicleFuelConsumption, getVehicleFuelType, getVehicleMaxFuel, refillVehicle, setVehicleConsumptionRates, setVehicleFuelTypes } from './functions.js';
+import { getVehicleFuelConsumption, getVehicleFuelType, getVehicleMaxFuel, refillClosestVehicle, refillVehicle, setVehicleConsumptionRates, setVehicleFuelTypes } from './functions.js';
 
 function useFuelAPI() {
     async function setFuelTypes() {
@@ -24,6 +24,10 @@ function useFuelAPI() {
         await refillVehicle(player);
     } 
 
+    async function refillCloseVehicle(player: alt.Player, amount: number) {
+        await refillClosestVehicle(player, amount);
+    }
+
     async function getMaxFuel(model: string | number) {
         return await getVehicleMaxFuel(model);
     }
@@ -34,6 +38,7 @@ function useFuelAPI() {
         getFuelType,
         getFuelConsumption,
         refill,
+        refillCloseVehicle,
         getMaxFuel
     }
 }

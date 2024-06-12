@@ -110,7 +110,6 @@ export async function setVehicleConsumptionRates() {
         const model = veh.model;
         const data = consumptionData[model];
 
-        console.log(`Data: ${JSON.stringify(data, undefined, 4)}`);
         if (data) {
             try {
                 Rebar.document.vehicle.useVehicle(veh).setBulk({
@@ -175,7 +174,6 @@ export async function getVehicleFuel(model: string | number) {
 export async function refillVehicle(player: alt.Player) {
     const document = Rebar.document.vehicle.useVehicle(player.vehicle).get();
 
-    console.log(JSON.stringify(document, undefined, 4));
     Rebar.document.vehicle.useVehicle(player.vehicle).setBulk({
         fuel: document.ascendedFuel.max,
         ascendedFuel: {

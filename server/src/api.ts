@@ -16,7 +16,7 @@ function useFuelAPI() {
         await getVehicleFuelType(model)
     }
 
-    async function getFuelConsumption(model: string) {
+    async function getFuelConsumption(model: alt.Vehicle) {
         await getVehicleFuelConsumption(model);
     }
 
@@ -28,7 +28,7 @@ function useFuelAPI() {
         await refillClosestVehicle(player, amount);
     }
 
-    async function getMaxFuel(model: string | number) {
+    async function getMaxFuel(model: alt.Vehicle) {
         return await getVehicleMaxFuel(model);
     }
 

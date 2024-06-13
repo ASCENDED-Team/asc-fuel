@@ -93,12 +93,6 @@ export async function setVehicleFuelTypes() {
     }
 }
 
-export async function getVehicleFuelType(model: string) {
-    const dbVehicle = await database.get<Vehicle>({ model: alt.hash(model) }, 'Vehicles');
-
-    return dbVehicle.ascendedFuel.type;
-}
-
 export async function setVehicleConsumptionRates() {
     const vehicles = alt.Vehicle.all;
 
@@ -141,6 +135,10 @@ export async function setVehicleConsumptionRates() {
             }
         }
     }
+}
+
+export async function getVehicleFuelType(veh: alt.Vehicle) {
+    return Rebar.document.vehicle.useVehicle(veh).get().ascendedFuel.type;
 }
 
 export async function getVehicleFuelConsumption(veh: alt.Vehicle) {

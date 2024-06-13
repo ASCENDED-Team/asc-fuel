@@ -12,7 +12,7 @@ function useFuelAPI() {
         await setVehicleConsumptionRates();
     }
 
-    async function getFuelType(model: string) {
+    async function getFuelType(model: alt.Vehicle) {
         await getVehicleFuelType(model)
     }
 

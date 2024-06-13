@@ -52,7 +52,7 @@ export async function updateFuelConsumption(player: alt.Player): Promise<void> {
         return;
     }
 
-    const baseFuelConsumptionRate = await getVehicleFuelConsumption(vehicle.model);
+    const baseFuelConsumptionRate = await getVehicleFuelConsumption(vehicle);
     const adjustedFuelConsumptionRate = baseFuelConsumptionRate * (1 + speed / 100);
     const fuelConsumed = distance * adjustedFuelConsumptionRate;
 
@@ -66,6 +66,8 @@ export async function updateFuelConsumption(player: alt.Player): Promise<void> {
             fuel: remainingFuel,
             timestamp: currentTime,
         });
+
+        console.log(`Remaining Fuel: ${remainingFuel}`);
     }
 }
 
@@ -141,34 +143,16 @@ export async function setVehicleConsumptionRates() {
     }
 }
 
-export async function getVehicleFuelConsumption(model: string | number) {
-    if (typeof model === 'string') {
-        alt.hash(model);
-    }
-
-    const dbVehicle = await database.get<Vehicle>({ model: model }, 'Vehicles');
-
-    return dbVehicle.ascendedFuel.consumption;
+export async function getVehicleFuelConsumption(veh: alt.Vehicle) {
+    return Rebar.document.vehicle.useVehicle(veh).get().ascendedFuel.consumption;
 }
 
-export async function getVehicleMaxFuel(model: string | number) {
-    if (typeof model === 'string') {
-        alt.hash(model);
-    }
-
-    const dbVehicle = await database.get<Vehicle>({ model: model }, 'Vehicles');
-
-    return dbVehicle.ascendedFuel.max;
+export async function getVehicleMaxFuel(veh: alt.Vehicle) {
+    return Rebar.document.vehicle.useVehicle(veh).get().ascendedFuel.max;
 }
 
-export async function getVehicleFuel(model: string | number) {
-    if (typeof model === 'string') {
-        alt.hash(model);
-    }
-
-    const dbVehicle = await database.get<Vehicle>({ model: model }, 'Vehicles');
-
-    return dbVehicle.fuel;
+export async function getVehicleFuel(veh: alt.Vehicle) {
+    return Rebar.document.vehicle.useVehicle(veh).getField('fuel');
 }
 
 export async function refillVehicle(player: alt.Player) {

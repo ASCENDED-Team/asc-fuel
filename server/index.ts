@@ -23,7 +23,7 @@ alt.setInterval(() => {
             if (FUEL_SETTINGS.AscHUD) {
                 const HudAPI = await useApi().getAsync('ascended-hud-api');
                 const fuelCalc =
-                    ((await getVehicleFuel(player.vehicle.model)) / (await getVehicleMaxFuel(player.vehicle.model))) *
+                    ((await getVehicleFuel(player.vehicle)) / (await getVehicleMaxFuel(player.vehicle))) *
                     100;
                 HudAPI.pushFuel(player, fuelCalc);
             }

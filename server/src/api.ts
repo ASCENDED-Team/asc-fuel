@@ -39,7 +39,7 @@ function useFuelAPI() {
     return {
         setFuelTypes,
         setConsumptionRates,
-        toggleEngine,
+        toggleVehicleEngine,
         getFuelType,
         getFuelConsumption,
         refill,

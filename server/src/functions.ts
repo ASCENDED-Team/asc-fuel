@@ -137,6 +137,22 @@ export async function setVehicleConsumptionRates() {
     }
 }
 
+export function toggleEngine(player: alt.Player) {
+    const playersVehicle = player.vehicle;
+    if (!playersVehicle || player.seat !== 1) return;
+
+    const rebarPlayer = Rebar.document.character.useCharacter(player);
+    const rebarVehicle = Rebar.vehicle.useVehicle(playersVehicle);
+    const fuel = Rebar.document.vehicle.useVehicle(playersVehicle).getField('fuel');
+
+    if (fuel <= 0) {
+        alt.log(`${rebarPlayer.get().name} tried to start engine of ${rebarVehicle.getVehicleModelName()} without fuel.`);
+        return;
+    }
+
+    rebarVehicle.toggleEngineAsPlayer(player);
+}
+
 export async function getVehicleFuelType(veh: alt.Vehicle) {
     return Rebar.document.vehicle.useVehicle(veh).get().ascendedFuel.type;
 }

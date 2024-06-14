@@ -134,6 +134,10 @@ export function toggleEngine(player: alt.Player) {
         return;
     }
 
+    if(playersVehicle.engineOn === false && FUEL_SETTINGS.enableSound) {
+        Rebar.player.useAudio(player).playSound(`/sounds/engine.ogg`);
+    }
+
     rebarVehicle.toggleEngineAsPlayer(player);
 }
 

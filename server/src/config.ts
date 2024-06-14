@@ -17,6 +17,7 @@ export const FUEL_SETTINGS = {
     DefaultConsumption: 0.003,
     DefaultFuel: FUEL_TYPES.Diesel,
     DefaultMax: 30,
+    enableSound: false,
 }
 
 export const VEHICLE_CONSUMPTION: Array<{ model: number, consume: number, type?: string, maxFuel: number }> = [

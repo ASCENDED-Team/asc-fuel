@@ -58,6 +58,10 @@ export async function updateFuelConsumption(player: alt.Player): Promise<void> {
 
     const remainingFuel = Math.max(0, initialFuel - fuelConsumed);
 
+    if(remainingFuel < 1) {
+        vehicle.engineOn = false;
+    }
+    
     if (speed > 0) {
         Rebar.document.vehicle.useVehicle(vehicle).set('fuel', remainingFuel);
 

@@ -20,8 +20,8 @@ function useFuelAPI() {
         await getVehicleFuelConsumption(model);
     }
 
-    async function refill(player: alt.Player) {
-        await refillVehicle(player);
+    async function refill(player: alt.Player, amount?: number) {
+        await refillVehicle(player, amount);
     } 
 
     async function refillCloseVehicle(player: alt.Player, amount: number) {

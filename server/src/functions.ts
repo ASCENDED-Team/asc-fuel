@@ -1,10 +1,11 @@
 import * as alt from 'alt-server';
 import { useRebar } from '@Server/index.js';
 import { FUEL_SETTINGS, VEHICLE_CONSUMPTION } from './config.js';
+import { useApi } from '@Server/api/index.js';
 
 const Rebar = useRebar();
-
 const vehicleData = new Map();
+const NotificationAPI = await useApi().getAsync('ascended-notification-api');
 
 export function startTracking(player: alt.Player) {
     const vehicle = player.vehicle;
@@ -55,8 +56,14 @@ export async function updateFuelConsumption(player: alt.Player): Promise<void> {
 
     const remainingFuel = Math.max(0, initialFuel - fuelConsumed);
 
-    if (remainingFuel <= 0) {
+    if (remainingFuel <= 0 && vehicle.engineOn) {
         vehicle.engineOn = false;
+        NotificationAPI.create(player, {
+            icon: '⛽',
+            title: 'Ascended Fuel',
+            subTitle: 'Fuel ran out',
+            message: `Your vehicle ran out of fuel :( `,
+        });
     }
 
     if (speed > 0) {
@@ -67,8 +74,6 @@ export async function updateFuelConsumption(player: alt.Player): Promise<void> {
             fuel: remainingFuel,
             timestamp: currentTime,
         });
-
-        console.log(`Remaining Fuel: ${remainingFuel}`);
     }
 }
 
@@ -116,14 +121,16 @@ export function toggleEngine(player: alt.Player) {
     const playersVehicle = player.vehicle;
     if (!playersVehicle || player.seat !== 1) return;
 
-    const rebarPlayer = Rebar.document.character.useCharacter(player);
     const rebarVehicle = Rebar.vehicle.useVehicle(playersVehicle);
     const fuel = Rebar.document.vehicle.useVehicle(playersVehicle).getField('fuel');
 
     if (fuel <= 1 && playersVehicle.engineOn === false) {
-        alt.log(
-            `${rebarPlayer.get().name} tried to start engine of ${rebarVehicle.getVehicleModelName()} without fuel.`,
-        );
+        NotificationAPI.create(player, {
+            icon: '⛽',
+            title: 'Ascended Fuel',
+            subTitle: 'Empty Fuel',
+            message: `There's no fuel left in your current vehicle. `,
+        });
         return;
     }
 
@@ -146,10 +153,14 @@ export async function getVehicleFuel(veh: alt.Vehicle) {
     return Rebar.document.vehicle.useVehicle(veh).getField('fuel');
 }
 
-export async function refillVehicle(player: alt.Player) {
+export async function refillVehicle(player: alt.Player, amount?: number) {
     if (!player.vehicle) return;
 
     const document = Rebar.document.vehicle.useVehicle(player.vehicle).get();
+
+    if(!amount) {
+        amount = document.ascendedFuel.max
+    } 
 
     Rebar.document.vehicle.useVehicle(player.vehicle).setBulk({
         fuel: document.ascendedFuel.max,

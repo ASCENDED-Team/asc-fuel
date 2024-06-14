@@ -55,7 +55,7 @@ export async function updateFuelConsumption(player: alt.Player): Promise<void> {
 
     const remainingFuel = Math.max(0, initialFuel - fuelConsumed);
 
-    if (remainingFuel < 1) {
+    if (remainingFuel <= 0) {
         vehicle.engineOn = false;
     }
 
@@ -120,7 +120,7 @@ export function toggleEngine(player: alt.Player) {
     const rebarVehicle = Rebar.vehicle.useVehicle(playersVehicle);
     const fuel = Rebar.document.vehicle.useVehicle(playersVehicle).getField('fuel');
 
-    if (fuel <= 0) {
+    if (fuel <= 1 && playersVehicle.engineOn === false) {
         alt.log(
             `${rebarPlayer.get().name} tried to start engine of ${rebarVehicle.getVehicleModelName()} without fuel.`,
         );

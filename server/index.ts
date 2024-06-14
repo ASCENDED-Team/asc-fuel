@@ -3,7 +3,6 @@ import {
     getVehicleFuel,
     getVehicleMaxFuel,
     setVehicleConsumptionRates,
-    setVehicleFuelTypes,
     startTracking,
     updateFuelConsumption,
 } from './src/functions.js';
@@ -32,6 +31,5 @@ alt.setInterval(() => {
 }, 1000);
 
 if (FUEL_SETTINGS.Debug) {
-    setVehicleFuelTypes();
     setVehicleConsumptionRates();
 }

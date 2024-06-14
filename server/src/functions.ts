@@ -1,11 +1,8 @@
 import * as alt from 'alt-server';
 import { useRebar } from '@Server/index.js';
-import { DIESEL, ELECTRIC, FUEL_SETTINGS, GASOLIN, KEROSIN, VEHICLE_CONSUMPTION } from './config.js';
-import { Vehicle } from '@Shared/types/vehicle.js';
-import { FUEL_TYPES } from './fuelTypes.js';
+import { FUEL_SETTINGS, VEHICLE_CONSUMPTION } from './config.js';
 
 const Rebar = useRebar();
-const database = Rebar.database.useDatabase();
 
 const vehicleData = new Map();
 
@@ -58,10 +55,10 @@ export async function updateFuelConsumption(player: alt.Player): Promise<void> {
 
     const remainingFuel = Math.max(0, initialFuel - fuelConsumed);
 
-    if(remainingFuel < 1) {
+    if (remainingFuel < 1) {
         vehicle.engineOn = false;
     }
-    
+
     if (speed > 0) {
         Rebar.document.vehicle.useVehicle(vehicle).set('fuel', remainingFuel);
 
@@ -75,72 +72,46 @@ export async function updateFuelConsumption(player: alt.Player): Promise<void> {
     }
 }
 
-export async function setVehicleFuelTypes() {
-    const fuelVehicles = [
-        ...GASOLIN.map((vehicle) => ({ model: vehicle, fuelType: FUEL_TYPES.Gasolin })),
-        ...KEROSIN.map((vehicle) => ({ model: vehicle, fuelType: FUEL_TYPES.Kerosin })),
-        ...DIESEL.map((vehicle) => ({ model: vehicle, fuelType: FUEL_TYPES.Diesel })),
-        ...ELECTRIC.map((vehicle) => ({ model: vehicle, fuelType: FUEL_TYPES.Electric })),
-    ];
-
-    for (const veh of fuelVehicles) {
-        try {
-            const dbVehicle = await database.get<Vehicle>({ model: alt.hash(veh.model) }, 'Vehicles');
-
-            if (dbVehicle) {
-                dbVehicle.ascendedFuel.type = veh.fuelType;
-                await database.update(dbVehicle, 'Vehicles');
-            }
-        } catch (error) {
-            console.error(`Failed to update vehicle model ${veh.model}:`, error);
-        }
-    }
-}
-
 export async function setVehicleConsumptionRates() {
     const vehicles = alt.Vehicle.all;
 
-    const consumptionData = VEHICLE_CONSUMPTION.reduce((acc, { model, consume, maxFuel }) => {
-        acc[model] = { consume, maxFuel };
+    const consumptionData = VEHICLE_CONSUMPTION.reduce((acc, { model, consume, type, maxFuel }) => {
+        acc[model] = { consume, type, maxFuel };
         return acc;
     }, {});
 
     for (const veh of vehicles) {
-        const document = Rebar.document.vehicle.useVehicle(veh).get();
+        const vehicleDocument = Rebar.document.vehicle.useVehicle(veh);
         const model = veh.model;
         const data = consumptionData[model];
 
-        if (data) {
-            try {
-                Rebar.document.vehicle.useVehicle(veh).setBulk({
+        try {
+            if (data) {
+                await vehicleDocument.setBulk({
                     ascendedFuel: {
                         consumption: data.consume,
                         max: data.maxFuel,
+                        type: data.type,
                     },
                 });
-            } catch (error) {
-                console.error(`Failed to update vehicle model ${model}:`, error);
-            }
-        } else if (data === undefined) {
-            try {
-                Rebar.document.vehicle.useVehicle(veh).setBulk({
+            } else {
+                await vehicleDocument.setBulk({
                     ascendedFuel: {
                         consumption: FUEL_SETTINGS.DefaultConsumption,
                         max: FUEL_SETTINGS.DefaultMax,
                         type: FUEL_SETTINGS.DefaultFuel,
                     },
                 });
-
-                console.warn(
-                    `No consumption data found for vehicle model ${model}. Stored default values to Database.`,
-                );
-            } catch (error) {
+            }
+        } catch (error) {
+            if (data) {
+                console.error(`Failed to update vehicle model ${model}:`, error);
+            } else {
                 console.error(`Failed to update vehicle model ${model} with default values:`, error);
             }
         }
     }
 }
-
 export function toggleEngine(player: alt.Player) {
     const playersVehicle = player.vehicle;
     if (!playersVehicle || player.seat !== 1) return;
@@ -150,7 +121,9 @@ export function toggleEngine(player: alt.Player) {
     const fuel = Rebar.document.vehicle.useVehicle(playersVehicle).getField('fuel');
 
     if (fuel <= 0) {
-        alt.log(`${rebarPlayer.get().name} tried to start engine of ${rebarVehicle.getVehicleModelName()} without fuel.`);
+        alt.log(
+            `${rebarPlayer.get().name} tried to start engine of ${rebarVehicle.getVehicleModelName()} without fuel.`,
+        );
         return;
     }
 
@@ -174,7 +147,7 @@ export async function getVehicleFuel(veh: alt.Vehicle) {
 }
 
 export async function refillVehicle(player: alt.Player) {
-    if(!player.vehicle) return;
+    if (!player.vehicle) return;
 
     const document = Rebar.document.vehicle.useVehicle(player.vehicle).get();
 
@@ -202,8 +175,8 @@ export async function refillVehicle(player: alt.Player) {
 export async function refillClosestVehicle(player: alt.Player, amount: number) {
     const closeVehicle = Rebar.get.useVehicleGetter().closestVehicle(player, 5);
 
-    console.log(`Close Vehicle: ${closeVehicle}`)
-    if(!closeVehicle) return;
+    console.log(`Close Vehicle: ${closeVehicle}`);
+    if (!closeVehicle) return;
 
     const document = Rebar.document.vehicle.useVehicle(closeVehicle).get();
 
@@ -217,14 +190,16 @@ export async function refillClosestVehicle(player: alt.Player, amount: number) {
                 type: document.ascendedFuel.type,
             },
         });
-    
+
         vehicleData.set(closeVehicle.id, {
             position: closeVehicle.pos,
             fuel: amount,
             consumptionRate: document.ascendedFuel.consumption,
             timestamp: Date.now(),
         });
-    
-        console.log(`Refilled Vehicle: ${document.model} to ${document.ascendedFuel.max} - New Fuel is: ${document.fuel}`);
-    }, 5000)
+
+        console.log(
+            `Refilled Vehicle: ${document.model} to ${document.ascendedFuel.max} - New Fuel is: ${document.fuel}`,
+        );
+    }, 5000);
 }

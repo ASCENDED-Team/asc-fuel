@@ -6,8 +6,21 @@ import { useApi } from '@Server/api/index.js';
 const Rebar = useRebar();
 const vehicleData = new Map();
 
-let NotificationAPI = null;
-if(FUEL_SETTINGS.AscNotification) {
+let NotificationAPI: Awaited<{
+    create: (
+        player: alt.Player,
+        notification: {
+            icon: string;
+            title: string;
+            subTitle: string;
+            message: string;
+            duration?: number;
+            oggFile?: string;
+        },
+    ) => void;
+    type: () => { info: string; error: string; warning: string; success: string };
+}> = null;
+if (FUEL_SETTINGS.AscNotification) {
     NotificationAPI = await useApi().getAsync('ascended-notification-api');
 }
 
@@ -98,7 +111,7 @@ export async function setVehicleConsumptionRates() {
         try {
             const vehicleDocument = Rebar.document.vehicle.useVehicle(veh);
             if (data && vehicleDocument) {
-                if(!data.type) {
+                if (!data.type) {
                     data.type = FUEL_SETTINGS.DefaultFuel;
                 }
 
@@ -110,7 +123,7 @@ export async function setVehicleConsumptionRates() {
                             type: data.type,
                         },
                     });
-                }, 250)
+                }, 250);
             } else {
                 await vehicleDocument.setBulk({
                     ascendedFuel: {

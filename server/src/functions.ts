@@ -12,7 +12,7 @@ export function startTracking(player: alt.Player) {
     if (!vehicle) return;
 
     const rebarDocument = Rebar.document.vehicle.useVehicle(vehicle).get();
-    if(!rebarDocument) return;
+    if (!rebarDocument) return;
 
     vehicleData.set(vehicle.id, {
         position: vehicle.pos,
@@ -27,7 +27,7 @@ export async function updateFuelConsumption(player: alt.Player): Promise<void> {
     if (!vehicle || !vehicleData.has(vehicle.id)) return;
 
     const rebarVehicle = Rebar.document.vehicle.useVehicle(vehicle).get();
-    if(!rebarVehicle) return;
+    if (!rebarVehicle) return;
 
     const initialData = vehicleData.get(vehicle.id)!;
     const initialPos = initialData.position;
@@ -93,7 +93,7 @@ export async function setVehicleConsumptionRates() {
 
     for (const veh of vehicles) {
         const vehicleDocument = Rebar.document.vehicle.useVehicle(veh);
-        if(!vehicleDocument) return;
+        if (!vehicleDocument) return;
 
         const model = veh.model;
         const data = consumptionData[model];
@@ -136,7 +136,7 @@ export function toggleEngine(player: alt.Player) {
         Rebar.vehicle.useVehicle(playersVehicle).toggleEngine();
         return;
     }
-    
+
     const fuel = rebarVehicle.fuel;
     if (fuel <= 1 && playersVehicle.engineOn === false) {
         NotificationAPI.create(player, {
@@ -157,29 +157,29 @@ export function toggleEngine(player: alt.Player) {
 
 export async function getVehicleFuelType(veh: alt.Vehicle) {
     const rebarVehicle = Rebar.document.vehicle.useVehicle(veh).get();
-    if(!rebarVehicle) return false;
+    if (!rebarVehicle) return 0;
 
     return rebarVehicle.ascendedFuel.type;
 }
 
 export async function getVehicleFuelConsumption(veh: alt.Vehicle) {
     const rebarVehicle = Rebar.document.vehicle.useVehicle(veh).get();
-    if(!rebarVehicle) return 0;
+    if (!rebarVehicle) return 0;
 
     return rebarVehicle.ascendedFuel.consumption;
 }
 
 export async function getVehicleMaxFuel(veh: alt.Vehicle) {
     const rebarVehicle = Rebar.document.vehicle.useVehicle(veh).get();
-    if(!rebarVehicle) return false;
+    if (!rebarVehicle) return 0;
 
     return rebarVehicle.ascendedFuel.max;
 }
 
 export async function getVehicleFuel(veh: alt.Vehicle) {
     const rebarVehicle = Rebar.document.vehicle.useVehicle(veh).get();
-    if(!rebarVehicle) return false;
-    
+    if (!rebarVehicle) return 0;
+
     return rebarVehicle.fuel;
 }
 

@@ -75,14 +75,16 @@ export async function updateFuelConsumption(player: alt.Player): Promise<void> {
 
     const remainingFuel = Math.max(0, initialFuel - fuelConsumed);
 
-    if (remainingFuel <= 0 && vehicle.engineOn && FUEL_SETTINGS.AscNotification) {
+    if (remainingFuel <= 0 && vehicle.engineOn) {
         vehicle.engineOn = false;
-        NotificationAPI.create(player, {
-            icon: '⛽',
-            title: 'Ascended Fuel',
-            subTitle: 'Fuel ran out',
-            message: `Your vehicle ran out of fuel. `,
-        });
+        if(FUEL_SETTINGS.AscNotification) {
+            NotificationAPI.create(player, {
+                icon: '⛽',
+                title: 'Ascended Fuel',
+                subTitle: 'Fuel ran out',
+                message: `Your vehicle ran out of fuel. `,
+            });
+        }
     }
 
     if (speed > 0) {
@@ -155,13 +157,15 @@ export function toggleEngine(player: alt.Player) {
     }
 
     const fuel = rebarVehicle.fuel;
-    if (fuel <= 1 && playersVehicle.engineOn === false && FUEL_SETTINGS.AscNotification) {
-        NotificationAPI.create(player, {
-            icon: '⛽',
-            title: 'Ascended Fuel',
-            subTitle: 'Empty Fuel',
-            message: `There's no fuel left in your current vehicle. `,
-        });
+    if (fuel <= 1 && playersVehicle.engineOn === false) {
+        if(FUEL_SETTINGS.AscNotification) {
+            NotificationAPI.create(player, {
+                icon: '⛽',
+                title: 'Ascended Fuel',
+                subTitle: 'Empty Fuel',
+                message: `There's no fuel left in your current vehicle. `,
+            });
+        }
         return;
     }
 

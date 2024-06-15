@@ -1,9 +1,11 @@
 import { useRebar } from '@Server/index.js';
 import * as alt from 'alt-server';
+
 const Rebar = useRebar();
 const ServerConfig = Rebar.useServerConfig();
 
 ServerConfig.set('disableVehicleEngineAutoStart', true); // Disables Engine Auto Start
+
 const FUEL_TYPES = {
     Gasolin: 'Gasolin',
     Diesel: 'Diesel',
@@ -13,6 +15,7 @@ const FUEL_TYPES = {
 
 export const FUEL_SETTINGS = {
     AscHUD: true,
+    AscNotification: true,
     Debug: true,
     DefaultConsumption: 0.003,
     DefaultFuel: FUEL_TYPES.Diesel,

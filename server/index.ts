@@ -31,6 +31,7 @@ async function updateVehicleFuelData(player: alt.Player) {
         HudAPI.pushFuel(player, fuelCalc);
     }
 }
+
 alt.setInterval(async () => {
     const playersWithVehicles = alt.Player.all.filter((player) => player.vehicle);
 

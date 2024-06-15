@@ -11,10 +11,13 @@ export function startTracking(player: alt.Player) {
     const vehicle = player.vehicle;
     if (!vehicle) return;
 
+    const rebarDocument = Rebar.document.vehicle.useVehicle(vehicle).get();
+    if(!rebarDocument) return;
+
     vehicleData.set(vehicle.id, {
         position: vehicle.pos,
-        fuel: Rebar.document.vehicle.useVehicle(vehicle).get().fuel,
-        consumptionRate: Rebar.document.vehicle.useVehicle(vehicle).get().ascendedFuel.consumption,
+        fuel: rebarDocument.fuel,
+        consumptionRate: rebarDocument.ascendedFuel.consumption,
         timestamp: Date.now(),
     });
 }
@@ -22,6 +25,9 @@ export function startTracking(player: alt.Player) {
 export async function updateFuelConsumption(player: alt.Player): Promise<void> {
     const vehicle = player.vehicle;
     if (!vehicle || !vehicleData.has(vehicle.id)) return;
+
+    const rebarVehicle = Rebar.document.vehicle.useVehicle(vehicle).get();
+    if(!rebarVehicle) return;
 
     const initialData = vehicleData.get(vehicle.id)!;
     const initialPos = initialData.position;
@@ -87,6 +93,8 @@ export async function setVehicleConsumptionRates() {
 
     for (const veh of vehicles) {
         const vehicleDocument = Rebar.document.vehicle.useVehicle(veh);
+        if(!vehicleDocument) return;
+
         const model = veh.model;
         const data = consumptionData[model];
 
@@ -121,8 +129,13 @@ export function toggleEngine(player: alt.Player) {
     const playersVehicle = player.vehicle;
     if (!playersVehicle || player.seat !== 1) return;
 
-    const rebarVehicle = Rebar.vehicle.useVehicle(playersVehicle);
+    const rebarVehicle = Rebar.document.vehicle.useVehicle(playersVehicle).get();
     const fuel = Rebar.document.vehicle.useVehicle(playersVehicle).getField('fuel');
+
+    if (!rebarVehicle) {
+        Rebar.vehicle.useVehicle(playersVehicle).toggleEngineAsPlayer(player);
+        return;
+    }
 
     if (fuel <= 1 && playersVehicle.engineOn === false) {
         NotificationAPI.create(player, {
@@ -134,27 +147,39 @@ export function toggleEngine(player: alt.Player) {
         return;
     }
 
-    if(playersVehicle.engineOn === false && FUEL_SETTINGS.enableSound) {
+    if (playersVehicle.engineOn === false && FUEL_SETTINGS.enableSound) {
         Rebar.player.useAudio(player).playSound(`/sounds/engine.ogg`);
     }
 
-    rebarVehicle.toggleEngineAsPlayer(player);
+        Rebar.vehicle.useVehicle(playersVehicle).toggleEngineAsPlayer(player);
 }
 
 export async function getVehicleFuelType(veh: alt.Vehicle) {
-    return Rebar.document.vehicle.useVehicle(veh).get().ascendedFuel.type;
+    const rebarVehicle = Rebar.document.vehicle.useVehicle(veh).get();
+    if(!rebarVehicle) return false;
+
+    return rebarVehicle.ascendedFuel.type;
 }
 
 export async function getVehicleFuelConsumption(veh: alt.Vehicle) {
-    return Rebar.document.vehicle.useVehicle(veh).get().ascendedFuel.consumption;
+    const rebarVehicle = Rebar.document.vehicle.useVehicle(veh).get();
+    if(!rebarVehicle) return 0;
+
+    return rebarVehicle.ascendedFuel.consumption;
 }
 
 export async function getVehicleMaxFuel(veh: alt.Vehicle) {
-    return Rebar.document.vehicle.useVehicle(veh).get().ascendedFuel.max;
+    const rebarVehicle = Rebar.document.vehicle.useVehicle(veh).get();
+    if(!rebarVehicle) return false;
+
+    return rebarVehicle.ascendedFuel.max;
 }
 
 export async function getVehicleFuel(veh: alt.Vehicle) {
-    return Rebar.document.vehicle.useVehicle(veh).getField('fuel');
+    const rebarVehicle = Rebar.document.vehicle.useVehicle(veh).get();
+    if(!rebarVehicle) return false;
+    
+    return rebarVehicle.fuel;
 }
 
 export async function refillVehicle(player: alt.Player, amount?: number) {
@@ -162,9 +187,9 @@ export async function refillVehicle(player: alt.Player, amount?: number) {
 
     const document = Rebar.document.vehicle.useVehicle(player.vehicle).get();
 
-    if(!amount) {
-        amount = document.ascendedFuel.max
-    } 
+    if (!amount) {
+        amount = document.ascendedFuel.max;
+    }
 
     Rebar.document.vehicle.useVehicle(player.vehicle).setBulk({
         fuel: document.ascendedFuel.max,

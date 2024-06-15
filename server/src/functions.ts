@@ -125,18 +125,19 @@ export async function setVehicleConsumptionRates() {
         }
     }
 }
+
 export function toggleEngine(player: alt.Player) {
     const playersVehicle = player.vehicle;
     if (!playersVehicle || player.seat !== 1) return;
 
     const rebarVehicle = Rebar.document.vehicle.useVehicle(playersVehicle).get();
-    const fuel = Rebar.document.vehicle.useVehicle(playersVehicle).getField('fuel');
 
     if (!rebarVehicle) {
-        Rebar.vehicle.useVehicle(playersVehicle).toggleEngineAsPlayer(player);
+        Rebar.vehicle.useVehicle(playersVehicle).toggleEngine();
         return;
     }
-
+    
+    const fuel = rebarVehicle.fuel;
     if (fuel <= 1 && playersVehicle.engineOn === false) {
         NotificationAPI.create(player, {
             icon: '⛽',
@@ -151,7 +152,7 @@ export function toggleEngine(player: alt.Player) {
         Rebar.player.useAudio(player).playSound(`/sounds/engine.ogg`);
     }
 
-        Rebar.vehicle.useVehicle(playersVehicle).toggleEngineAsPlayer(player);
+    Rebar.vehicle.useVehicle(playersVehicle).toggleEngineAsPlayer(player);
 }
 
 export async function getVehicleFuelType(veh: alt.Vehicle) {

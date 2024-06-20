@@ -77,7 +77,7 @@ export async function updateFuelConsumption(player: alt.Player): Promise<void> {
 
     if (remainingFuel <= 0 && vehicle.engineOn) {
         vehicle.engineOn = false;
-        if(FUEL_SETTINGS.AscNotification) {
+        if (FUEL_SETTINGS.AscNotification) {
             NotificationAPI.create(player, {
                 icon: '⛽',
                 title: 'Ascended Fuel',
@@ -158,7 +158,7 @@ export function toggleEngine(player: alt.Player) {
 
     const fuel = rebarVehicle.fuel;
     if (fuel <= 1 && playersVehicle.engineOn === false) {
-        if(FUEL_SETTINGS.AscNotification) {
+        if (FUEL_SETTINGS.AscNotification) {
             NotificationAPI.create(player, {
                 icon: '⛽',
                 title: 'Ascended Fuel',
@@ -241,7 +241,7 @@ export async function refillClosestVehicle(player: alt.Player, amount: number) {
     Rebar.player.useAnimation(player).playFinite('mini@repair', 'fixing_a_ped', 1, 5000);
     alt.setTimeout(() => {
         Rebar.document.vehicle.useVehicle(closeVehicle).setBulk({
-            fuel: document.ascendedFuel.max,
+            fuel: (document.fuel += amount),
             ascendedFuel: {
                 consumption: document.ascendedFuel.consumption,
                 max: document.ascendedFuel.max,
@@ -251,7 +251,7 @@ export async function refillClosestVehicle(player: alt.Player, amount: number) {
 
         vehicleData.set(closeVehicle.id, {
             position: closeVehicle.pos,
-            fuel: amount,
+            fuel: (document.fuel += amount),
             consumptionRate: document.ascendedFuel.consumption,
             timestamp: Date.now(),
         });

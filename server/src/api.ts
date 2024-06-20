@@ -1,7 +1,16 @@
 import * as alt from 'alt-server';
 
 import { useApi } from '@Server/api/index.js';
-import { getVehicleFuelConsumption, getVehicleFuelType, getVehicleMaxFuel, refillClosestVehicle, refillVehicle, setVehicleConsumptionRates, toggleEngine } from './functions.js';
+import {
+    getVehicleFuelConsumption,
+    getVehicleFuelType,
+    getVehicleMaxFuel,
+    refillClosestVehicle,
+    refillVehicle,
+    setVehicleConsumptionRates,
+    toggleEngine,
+} from './functions.js';
+import { FUEL_SETTINGS, FUEL_TYPES } from './config.js';
 
 function useFuelAPI() {
     async function setConsumptionRates() {
@@ -13,7 +22,7 @@ function useFuelAPI() {
     }
 
     async function getFuelType(model: alt.Vehicle) {
-        await getVehicleFuelType(model)
+        await getVehicleFuelType(model);
     }
 
     async function getFuelConsumption(model: alt.Vehicle) {
@@ -22,14 +31,18 @@ function useFuelAPI() {
 
     async function refill(player: alt.Player, amount?: number) {
         await refillVehicle(player, amount);
-    } 
+    }
 
     async function refillCloseVehicle(player: alt.Player, amount: number) {
         await refillClosestVehicle(player, amount);
     }
 
     async function getMaxFuel(model: alt.Vehicle) {
-        return await getVehicleMaxFuel(model);
+        await getVehicleMaxFuel(model);
+    }
+
+    function getFuelTypes() {
+        return FUEL_TYPES;
     }
 
     return {
@@ -39,8 +52,9 @@ function useFuelAPI() {
         getFuelConsumption,
         refill,
         refillCloseVehicle,
-        getMaxFuel
-    }
+        getMaxFuel,
+        getFuelTypes,
+    };
 }
 
 declare global {

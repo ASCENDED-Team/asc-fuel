@@ -46,3 +46,57 @@ alt.setInterval(async () => {
 alt.setTimeout(async () => {
     await setVehicleConsumptionRates();
 }, 1500);
+
+// Checks for updates...
+if (FUEL_SETTINGS.checkForUpdates) {
+    const hudVersion = 'v1.0';
+    async function requestLatestVersion() {
+        /* 
+        ASCENDED-Team API Key. This will only work for our plugins.
+        If you want to use our version check API - Feel free to contact us!
+        Our Discord: https://discord.gg/HTKM9NdhVa 
+        */
+        const apiKey = 'qcsWTe_olrldSoni3K8AHkTeDCeu2rJiG5AKeqAWBBc';
+        const url = `http://api.rebar-ascended.dev:5072/versioncheck-api?url=ascended-team/asc-fuel&version=${hudVersion}&apiKey=${apiKey}`;
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Request failed with status ${response.status}`);
+            }
+            const data: {
+                repository: string;
+                release: string;
+                releasedAt: string;
+                commitHash: string;
+                latestCommit: string;
+                isOutdated: boolean;
+            } = await response.json();
+
+            if (data.isOutdated) {
+                alt.logWarning(
+                    `[ASCENDED-API]: Your plugin: ${data.repository} is outdated. Latest Commit: ${data.latestCommit} | Version (${data.release}) | ${data.releasedAt}`,
+                );
+            } else {
+                alt.logWarning(
+                    `[ASCENDED-API]: Your plugin: ${data.repository} is up to date. Latest Commit: ${data.latestCommit} | Version (${data.release}) | ${data.releasedAt}`,
+                );
+            }
+        } catch (error) {
+            if (error.response) {
+                alt.logWarning(
+                    `[ASCENDED-Versioncheck-API] => No Response from Ascended API Server... Status: ${error.response.status}`,
+                );
+            } else {
+                alt.logWarning(
+                    `[ASCENDED-Versioncheck-API] => No Response from Ascended API Server... ${error.message}`,
+                );
+            }
+        }
+        return null;
+    }
+
+    setTimeout(() => {
+        requestLatestVersion();
+    }, 250);
+}

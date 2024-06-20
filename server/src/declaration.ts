@@ -4,6 +4,6 @@ declare module '@Shared/types/vehicle.js' {
             type: string;
             consumption: number;
             max: number;
-        }
+        };
     }
 }

@@ -49,7 +49,7 @@ alt.setTimeout(async () => {
 
 // Checks for updates...
 if (FUEL_SETTINGS.checkForUpdates) {
-    const hudVersion = 'v1.0';
+    const fuelVersion = 'v1.01';
     async function requestLatestVersion() {
         /* 
         ASCENDED-Team API Key. This will only work for our plugins.
@@ -57,7 +57,7 @@ if (FUEL_SETTINGS.checkForUpdates) {
         Our Discord: https://discord.gg/HTKM9NdhVa 
         */
         const apiKey = 'qcsWTe_olrldSoni3K8AHkTeDCeu2rJiG5AKeqAWBBc';
-        const url = `http://api.rebar-ascended.dev:5072/versioncheck-api?url=ascended-team/asc-fuel&version=${hudVersion}&apiKey=${apiKey}`;
+        const url = `http://api.rebar-ascended.dev:5072/versioncheck-api?url=ascended-team/asc-fuel&version=${fuelVersion}&apiKey=${apiKey}`;
 
         try {
             const response = await fetch(url);

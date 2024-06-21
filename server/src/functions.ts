@@ -239,9 +239,20 @@ export async function refillClosestVehicle(player: alt.Player, amount: number) {
     const document = Rebar.document.vehicle.useVehicle(closeVehicle).get();
 
     Rebar.player.useAnimation(player).playFinite('mini@repair', 'fixing_a_ped', 1, 5000);
+
+    if (!amount) {
+        document.fuel = document.ascendedFuel.max;
+    } else {
+        let newFuel = (document.fuel += amount);
+        if (newFuel > document.ascendedFuel.max) {
+            newFuel = document.ascendedFuel.max;
+            document.fuel = newFuel;
+        }
+    }
+
     alt.setTimeout(() => {
         Rebar.document.vehicle.useVehicle(closeVehicle).setBulk({
-            fuel: (document.fuel += amount),
+            fuel: document.fuel,
             ascendedFuel: {
                 consumption: document.ascendedFuel.consumption,
                 max: document.ascendedFuel.max,
@@ -251,9 +262,10 @@ export async function refillClosestVehicle(player: alt.Player, amount: number) {
 
         vehicleData.set(closeVehicle.id, {
             position: closeVehicle.pos,
-            fuel: (document.fuel += amount),
+            fuel: document.fuel,
             consumptionRate: document.ascendedFuel.consumption,
             timestamp: Date.now(),
         });
+        console.log(`New Fuel is: ${document.fuel}L!`);
     }, 5000);
 }

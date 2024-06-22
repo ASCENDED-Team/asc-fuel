@@ -49,7 +49,7 @@ alt.setTimeout(async () => {
 
 // Checks for updates...
 if (FUEL_SETTINGS.checkForUpdates) {
-    const fuelVersion = 'v1.01';
+    const fuelVersion = 'v1.02';
     async function requestLatestVersion() {
         /* 
         ASCENDED-Team API Key. This will only work for our plugins.

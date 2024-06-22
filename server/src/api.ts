@@ -16,31 +16,26 @@ import { Vehicle } from '@Shared/types/vehicle.js';
 
 const Rebar = useRebar();
 function useFuelAPI() {
-    async function createAscendedFuelProperties() {
+    async function createAscendedFuelPropertie(vehicle: alt.Vehicle) {
         try {
-            // Step 1: Retrieve all vehicles from the database
-            const allVehicles = await Rebar.database.useDatabase().getAll<{ _id: string }>('Vehicles');
-
-            // Step 2: Iterate over each vehicle
-            for (const vehicle of allVehicles) {
-                // Step 3: Check if the vehicle has ascendedFuel property
-                const currentVehicle = await Rebar.database
-                    .useDatabase()
-                    .get<Vehicle>({ _id: vehicle._id }, 'Vehicles');
-
-                if (!currentVehicle.ascendedFuel) {
-                    // Step 4: Set ascendedFuel property if missing
-                    await Rebar.database
-                        .useDatabase()
-                        .update<Vehicle>({ _id: vehicle._id }, { $set: { ascendedFuel: true } }, 'Vehicles');
-                    console.log(`Set ASCENDED-Fuel Properties for: ${currentVehicle.model}.`);
-                }
-            }
-            console.log('All vehicles checked and updated successfully.');
+            const vehicleDocument = Rebar.document.vehicle.useVehicle(vehicle);
+            await vehicleDocument.setBulk({
+                fuel: 30,
+                ascendedFuel: {
+                    consumption: 0,
+                    max: 0,
+                    type: '',
+                },
+            });
+            await setConsumptionRates();
+            console.log(
+                `Added ascended fuel properties for Vehicle Model: ${Rebar.utility.vehicleHashes.getNameFromHash(vehicle.model)} | Fuel: ${vehicleDocument.getField('fuel')}`,
+            );
         } catch (error) {
             console.error('Error while setting ASCENDED-Fuel Properties:', error);
         }
     }
+
     async function setConsumptionRates() {
         await setVehicleConsumptionRates();
     }
@@ -49,12 +44,12 @@ function useFuelAPI() {
         toggleEngine(player);
     }
 
-    async function getFuelType(model: alt.Vehicle) {
-        await getVehicleFuelType(model);
+    async function getFuelType(vehicle: alt.Vehicle) {
+        await getVehicleFuelType(vehicle);
     }
 
-    async function getFuelConsumption(model: alt.Vehicle) {
-        await getVehicleFuelConsumption(model);
+    async function getFuelConsumption(vehicle: alt.Vehicle) {
+        await getVehicleFuelConsumption(vehicle);
     }
 
     async function refill(player: alt.Player, amount?: number) {
@@ -65,8 +60,8 @@ function useFuelAPI() {
         await refillClosestVehicle(player, amount);
     }
 
-    async function getMaxFuel(model: alt.Vehicle) {
-        await getVehicleMaxFuel(model);
+    async function getMaxFuel(vehicle: alt.Vehicle) {
+        await getVehicleMaxFuel(vehicle);
     }
 
     function getFuelTypes() {
@@ -74,6 +69,7 @@ function useFuelAPI() {
     }
 
     return {
+        createAscendedFuelPropertie,
         setConsumptionRates,
         toggleVehicleEngine,
         getFuelType,

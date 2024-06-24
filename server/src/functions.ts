@@ -76,7 +76,7 @@ export async function updateFuelConsumption(player: alt.Player): Promise<void> {
     const remainingFuel = Math.max(0, initialFuel - fuelConsumed);
 
     if (remainingFuel <= 0 && vehicle.engineOn) {
-        vehicle.engineOn = false;
+        toggleEngine(player);
         if (FUEL_SETTINGS.AscNotification) {
             NotificationAPI.create(player, {
                 icon: '⛽',
@@ -204,34 +204,24 @@ export async function getVehicleFuel(veh: alt.Vehicle) {
     return rebarVehicle.fuel;
 }
 
-export async function refillVehicle(player: alt.Player, amount?: number) {
+export async function refillVehicle(player: alt.Player, amount: number) {
     if (!player.vehicle) return;
 
-    const document = Rebar.document.vehicle.useVehicle(player.vehicle).get();
+    const vehicleDoc = Rebar.document.vehicle.useVehicle(player.vehicle);
+    const document = vehicleDoc.get();
 
     if (!amount) {
         amount = document.ascendedFuel.max;
         document.fuel = amount;
-
         console.log(`Max fill => ${document.fuel} | AMOUNT: ${amount}`);
     } else {
-        let newFuel = (document.fuel += amount);
-
-        if (newFuel > document.ascendedFuel.max) {
-            newFuel = document.ascendedFuel.max;
-        }
-
-        document.fuel = newFuel;
-        console.log(` New Fuel is: ${newFuel}`);
+        document.fuel = Math.min(document.fuel + amount, document.ascendedFuel.max);
+        console.log(`New Fuel is: ${document.fuel}`);
     }
 
-    Rebar.document.vehicle.useVehicle(player.vehicle).setBulk({
+    vehicleDoc.setBulk({
         fuel: document.fuel,
-        ascendedFuel: {
-            consumption: document.ascendedFuel.consumption,
-            max: document.ascendedFuel.max,
-            type: document.ascendedFuel.type,
-        },
+        ascendedFuel: { ...document.ascendedFuel },
     });
 
     vehicleData.set(player.vehicle.id, {
@@ -244,28 +234,27 @@ export async function refillVehicle(player: alt.Player, amount?: number) {
     updateFuelConsumption(player);
 }
 
-export async function refillClosestVehicle(player: alt.Player, amount: number, duration: number = 5000) {
+export async function refillClosestVehicle(player: alt.Player, amount: number, duration = 5000) {
     const closeVehicle = Rebar.get.useVehicleGetter().closestVehicle(player, 5);
     if (!closeVehicle || player.vehicle) return;
 
-    const document = Rebar.document.vehicle.useVehicle(closeVehicle).get();
-
     Rebar.player.useAnimation(player).playFinite('mini@repair', 'fixing_a_ped', 1, duration);
 
-    document.fuel = amount ? Math.min(document.fuel + amount, document.ascendedFuel.max) : document.ascendedFuel.max;
-
     alt.setTimeout(() => {
-        Rebar.document.vehicle.useVehicle(closeVehicle).setBulk({
-            fuel: document.fuel,
-            ascendedFuel: document.ascendedFuel,
-        });
+        const document = Rebar.document.vehicle.useVehicle(closeVehicle);
+        const vehicleDocument = document.get();
+        const maxFuel = vehicleDocument.ascendedFuel.max;
+        const newFuel = Math.min(document.getField('fuel') + amount, maxFuel);
+
+        document.setBulk({ fuel: newFuel });
 
         vehicleData.set(closeVehicle.id, {
             position: closeVehicle.pos,
-            fuel: document.fuel,
-            consumptionRate: document.ascendedFuel.consumption,
+            fuel: newFuel,
+            consumptionRate: vehicleDocument.ascendedFuel.consumption,
             timestamp: Date.now(),
         });
-        console.log(`New Fuel is: ${document.fuel}L!`);
+
+        console.log(`Refueled closest Vehicle - New Fuel Level: ${newFuel}L`);
     }, duration);
 }

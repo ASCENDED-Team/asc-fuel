@@ -36,7 +36,9 @@ alt.setInterval(async () => {
     const playersWithVehicles = alt.Player.all.filter((player) => player.vehicle);
 
     for (const player of playersWithVehicles) {
-        if (!player.vehicle.engineOn) return;
+        if (!player.vehicle.engineOn) {
+            return;
+        }
 
         updateFuelConsumption(player);
         await updateVehicleFuelData(player);

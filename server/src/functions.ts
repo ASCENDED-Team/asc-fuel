@@ -39,14 +39,25 @@ export function startTracking(player: alt.Player) {
 
 export async function updateFuelConsumption(player: alt.Player): Promise<void> {
     const vehicle = player.vehicle;
+
+    if (!vehicle) {
+        console.log('No vehicle found for the player.');
+        return;
+    }
+
     const rebarVehicle = Rebar.document.vehicle.useVehicle(vehicle).get();
-    if (!vehicle || !rebarVehicle) return;
+    if (!rebarVehicle) {
+        console.log('No rebar vehicle data found.');
+        return;
+    }
 
-    const initialData = vehicleData.get(vehicle.id)!;
-    const initialPos = initialData.position;
-    const initialFuel = initialData.fuel;
-    const initialTime = initialData.timestamp;
+    const initialData = vehicleData.get(vehicle.id);
+    if (!initialData) {
+        console.log('No initial vehicle data found.');
+        return;
+    }
 
+    const { position: initialPos, fuel: initialFuel, timestamp: initialTime } = initialData;
     const currentPos = vehicle.pos;
     const currentTime = Date.now();
 
@@ -57,14 +68,11 @@ export async function updateFuelConsumption(player: alt.Player): Promise<void> {
     );
 
     const timeElapsed = (currentTime - initialTime) / 1000;
-
     if (timeElapsed <= 0) {
-        console.log('Time elapsed is zero or negative, skipping fuel consumption update.');
         return;
     }
 
     const speed = distance / timeElapsed;
-
     if (distance === 0 || speed === 0) {
         return;
     }
@@ -72,7 +80,6 @@ export async function updateFuelConsumption(player: alt.Player): Promise<void> {
     const baseFuelConsumptionRate = await getVehicleFuelConsumption(vehicle);
     const adjustedFuelConsumptionRate = baseFuelConsumptionRate * (1 + speed / 100);
     const fuelConsumed = distance * adjustedFuelConsumptionRate;
-
     const remainingFuel = Math.max(0, initialFuel - fuelConsumed);
 
     if (remainingFuel <= 0 && vehicle.engineOn) {
@@ -82,20 +89,26 @@ export async function updateFuelConsumption(player: alt.Player): Promise<void> {
                 icon: '⛽',
                 title: 'Ascended Fuel',
                 subTitle: 'Fuel ran out',
-                message: `Your vehicle ran out of fuel. `,
+                message: 'Your vehicle ran out of fuel.',
             });
         }
-    }
-
-    if (speed > 0) {
-        Rebar.document.vehicle.useVehicle(vehicle).set('fuel', remainingFuel);
 
         vehicleData.set(vehicle.id, {
             position: currentPos,
-            fuel: remainingFuel,
+            fuel: 0,
             timestamp: currentTime,
         });
+        Rebar.document.vehicle.useVehicle(vehicle).set('fuel', 0);
+        return;
     }
+
+    Rebar.document.vehicle.useVehicle(vehicle).set('fuel', parseFloat(remainingFuel.toFixed(2)));
+
+    vehicleData.set(vehicle.id, {
+        position: currentPos,
+        fuel: parseFloat(remainingFuel.toFixed(2)),
+        timestamp: currentTime,
+    });
 }
 
 export async function setVehicleConsumptionRates() {
@@ -157,7 +170,7 @@ export function toggleEngine(player: alt.Player) {
     }
 
     const fuel = rebarVehicle.fuel;
-    if (fuel <= 1 && playersVehicle.engineOn === false) {
+    if (fuel <= 0 && playersVehicle.engineOn === false) {
         if (FUEL_SETTINGS.AscNotification) {
             NotificationAPI.create(player, {
                 icon: '⛽',
@@ -220,7 +233,7 @@ export async function refillVehicle(player: alt.Player, amount: number) {
     }
 
     vehicleDoc.setBulk({
-        fuel: document.fuel,
+        fuel: parseFloat(document.fuel.toFixed(2)),
         ascendedFuel: { ...document.ascendedFuel },
     });
 
@@ -244,7 +257,7 @@ export async function refillClosestVehicle(player: alt.Player, amount: number, d
         const document = Rebar.document.vehicle.useVehicle(closeVehicle);
         const vehicleDocument = document.get();
         const maxFuel = vehicleDocument.ascendedFuel.max;
-        const newFuel = Math.min(document.getField('fuel') + amount, maxFuel);
+        const newFuel = parseFloat(Math.min(document.getField('fuel') + amount, maxFuel).toFixed(2));
 
         document.setBulk({ fuel: newFuel });
 

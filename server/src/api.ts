@@ -56,8 +56,8 @@ function useFuelAPI() {
         await refillVehicle(player, amount);
     }
 
-    async function refillCloseVehicle(player: alt.Player, amount: number) {
-        await refillClosestVehicle(player, amount);
+    async function refillCloseVehicle(player: alt.Player, amount: number, type?: string, duration?: number) {
+        await refillClosestVehicle(player, amount, type, duration);
     }
 
     async function getMaxFuel(vehicle: alt.Vehicle) {

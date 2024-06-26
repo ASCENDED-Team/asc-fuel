@@ -193,9 +193,16 @@ export function toggleEngine(player: alt.Player) {
         return;
     }
 
+    if (playersVehicle.hasStreamSyncedMeta('engineIsDisabled')) {
+        const engineIsDisabled = playersVehicle.getStreamSyncedMeta('engineIsDisabled');
+        if (engineIsDisabled) {
+            return;
+        }
+    }
+
     const fuel = rebarVehicle.fuel;
 
-    if (playersVehicle.engineOn === true) {
+    if (playersVehicle.engineOn === false) {
         if (fuel <= 0) {
             if (FUEL_SETTINGS.AscNotification) {
                 NotificationAPI.create(player, {
@@ -205,25 +212,18 @@ export function toggleEngine(player: alt.Player) {
                     message: `There's no fuel left in your current vehicle. `,
                 });
             }
-            toggleEngine(player);
-            return;
-        }
 
-        if (playersVehicle.hasStreamSyncedMeta('engineIsDisabled')) {
-            const engineIsDisabled = playersVehicle.getStreamSyncedMeta('engineIsDisabled');
-            if (engineIsDisabled) {
-                return;
-            }
+            return;
         }
 
         if (FUEL_SETTINGS.enableSound) {
             Rebar.player.useAudio(player).playSound(`/sounds/engine.ogg`);
         }
-    } else {
-        let vehiclePlayers = playersVehicle.passengers;
-        for (const [seat, _player] of Object.entries(vehiclePlayers)) {
-            alt.emitClient(_player, 'ResetRPM');
-        }
+    }
+
+    let vehiclePlayers = playersVehicle.passengers;
+    for (const [seat, _player] of Object.entries(vehiclePlayers)) {
+        alt.emitClient(_player, 'ResetRPM');
     }
 
     Rebar.vehicle.useVehicle(playersVehicle).toggleEngineAsPlayer(player);

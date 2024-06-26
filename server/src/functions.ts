@@ -90,7 +90,7 @@ export async function updateFuelConsumption(player: alt.Player): Promise<void> {
     const remainingFuel = Math.max(0, initialFuel - fuelConsumed);
 
     if (remainingFuel <= 0 && vehicle.engineOn) {
-        toggleEngine(player);
+        toggleEngineWithoutPlayer(vehicle);
         if (FUEL_SETTINGS.AscNotification) {
             NotificationAPI.create(player, {
                 icon: '⛽',
@@ -132,7 +132,7 @@ export async function updateFuelConsumption(player: alt.Player): Promise<void> {
 }
 
 async function breakEngine(player: alt.Player, vehicle: alt.Vehicle) {
-    toggleEngine(player);
+    toggleEngineWithoutPlayer(vehicle);
     if (FUEL_SETTINGS.AscNotification) {
         const ascendedFuel = await getAscendedFuel(vehicle);
         if (ascendedFuel) {
@@ -230,6 +230,42 @@ export function toggleEngine(player: alt.Player) {
     }
 
     Rebar.vehicle.useVehicle(playersVehicle).toggleEngineAsPlayer(player);
+}
+
+export function toggleEngineWithoutPlayer(vehicle: alt.Vehicle) {
+    const rebarVehicle = Rebar.document.vehicle.useVehicle(vehicle).get();
+
+    if (!rebarVehicle) {
+        Rebar.vehicle.useVehicle(vehicle).toggleEngine();
+        return;
+    }
+
+    const fuel = rebarVehicle.fuel;
+
+    if (vehicle.engineOn === false) {
+        // put all functionality that is needed before the engine gets started in here
+
+        if (fuel <= 0) {
+            alt.logWarning('vehicle has no fuel');
+            return;
+        }
+
+        if (vehicle.hasStreamSyncedMeta('engineIsDisabled')) {
+            const engineIsDisabled = vehicle.getStreamSyncedMeta('engineIsDisabled');
+            if (engineIsDisabled) {
+                return;
+            }
+        }
+    } else {
+        // put all functionality that is needed before the engine gets stoped in here
+
+        let vehiclePlayers = vehicle.passengers;
+        for (const [seat, _player] of Object.entries(vehiclePlayers)) {
+            alt.emitClient(_player, 'ResetRPM');
+        }
+    }
+
+    Rebar.vehicle.useVehicle(vehicle).toggleEngine();
 }
 
 export async function getVehicleFuelType(veh: alt.Vehicle) {

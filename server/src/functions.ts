@@ -7,6 +7,12 @@ const Rebar = useRebar();
 const vehicleData = new Map();
 const timeoutSet = new Set<number>();
 
+declare module 'alt-shared' {
+    export interface ICustomVehicleStreamSyncedMeta {
+        engineIsDisabled: boolean;
+    }
+}
+
 let NotificationAPI: Awaited<{
     create: (
         player: alt.Player,
@@ -188,23 +194,31 @@ export function toggleEngine(player: alt.Player) {
     }
 
     const fuel = rebarVehicle.fuel;
-    if (fuel <= 0 && playersVehicle.engineOn === false) {
-        if (FUEL_SETTINGS.AscNotification) {
-            NotificationAPI.create(player, {
-                icon: '⛽',
-                title: 'Ascended Fuel',
-                subTitle: 'Empty Fuel',
-                message: `There's no fuel left in your current vehicle. `,
-            });
+
+    if (playersVehicle.engineOn === false) {
+        if (fuel <= 0) {
+            if (FUEL_SETTINGS.AscNotification) {
+                NotificationAPI.create(player, {
+                    icon: '⛽',
+                    title: 'Ascended Fuel',
+                    subTitle: 'Empty Fuel',
+                    message: `There's no fuel left in your current vehicle. `,
+                });
+            }
+            return;
         }
-        return;
-    }
 
-    if (playersVehicle.engineOn === false && FUEL_SETTINGS.enableSound) {
-        Rebar.player.useAudio(player).playSound(`/sounds/engine.ogg`);
-    }
+        if (playersVehicle.hasStreamSyncedMeta('engineIsDisabled')) {
+            const engineIsDisabled = playersVehicle.getStreamSyncedMeta('engineIsDisabled');
+            if (engineIsDisabled) {
+                return;
+            }
+        }
 
-    if (playersVehicle.engineOn === true) {
+        if (FUEL_SETTINGS.enableSound) {
+            Rebar.player.useAudio(player).playSound(`/sounds/engine.ogg`);
+        }
+    } else {
         let vehiclePlayers = playersVehicle.passengers;
         for (const [seat, _player] of Object.entries(vehiclePlayers)) {
             alt.emitClient(_player, 'ResetRPM');

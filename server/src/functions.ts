@@ -101,7 +101,6 @@ export async function updateFuelConsumption(player: alt.Player): Promise<void> {
         });
         Rebar.document.vehicle.useVehicle(vehicle).set('fuel', 0);
 
-        alt.emitClient(player, 'ResetRPM');
         return;
     }
 
@@ -203,6 +202,13 @@ export function toggleEngine(player: alt.Player) {
 
     if (playersVehicle.engineOn === false && FUEL_SETTINGS.enableSound) {
         Rebar.player.useAudio(player).playSound(`/sounds/engine.ogg`);
+    }
+
+    if (playersVehicle.engineOn === true) {
+        let vehiclePlayers = playersVehicle.passengers;
+        for (const [seat, _player] of Object.entries(vehiclePlayers)) {
+            alt.emitClient(_player, 'ResetRPM');
+        }
     }
 
     Rebar.vehicle.useVehicle(playersVehicle).toggleEngineAsPlayer(player);

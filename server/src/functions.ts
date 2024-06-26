@@ -196,6 +196,9 @@ export function toggleEngine(player: alt.Player) {
     const fuel = rebarVehicle.fuel;
 
     if (playersVehicle.engineOn === false) {
+        // put all functionality that is needed before the engine gets started in here
+
+        // checks if vehicle has enough fuel
         if (fuel <= 0) {
             if (FUEL_SETTINGS.AscNotification) {
                 NotificationAPI.create(player, {
@@ -208,6 +211,7 @@ export function toggleEngine(player: alt.Player) {
             return;
         }
 
+        // checks if vehicle is disabled by some third plugin
         if (playersVehicle.hasStreamSyncedMeta('engineIsDisabled')) {
             const engineIsDisabled = playersVehicle.getStreamSyncedMeta('engineIsDisabled');
             if (engineIsDisabled) {
@@ -215,10 +219,14 @@ export function toggleEngine(player: alt.Player) {
             }
         }
 
+        // checks if the enable sound should be played and immediately plays it
         if (FUEL_SETTINGS.enableSound) {
             Rebar.player.useAudio(player).playSound(`/sounds/engine.ogg`);
         }
     } else {
+        // put all functionality that is needed before the engine gets stoped in here
+
+        // fixes the jittering of the vehicle
         let vehiclePlayers = playersVehicle.passengers;
         for (const [seat, _player] of Object.entries(vehiclePlayers)) {
             alt.emitClient(_player, 'ResetRPM');

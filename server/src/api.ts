@@ -9,6 +9,7 @@ import {
     refillVehicle,
     setVehicleConsumptionRates,
     toggleEngine,
+    toggleEngineWithoutPlayer,
 } from './functions.js';
 import { FUEL_TYPES } from './config.js';
 import { useRebar } from '@Server/index.js';
@@ -44,6 +45,10 @@ function useFuelAPI() {
         toggleEngine(player);
     }
 
+    function toggleVehicleEngineWithoutPlayer(vehicle: alt.Vehicle) {
+        toggleEngineWithoutPlayer(vehicle);
+    }
+
     async function getFuelType(vehicle: alt.Vehicle) {
         await getVehicleFuelType(vehicle);
     }
@@ -72,6 +77,7 @@ function useFuelAPI() {
         createAscendedFuelPropertie,
         setConsumptionRates,
         toggleVehicleEngine,
+        toggleVehicleEngineWithoutPlayer,
         getFuelType,
         getFuelConsumption,
         refill,

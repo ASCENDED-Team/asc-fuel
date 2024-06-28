@@ -184,7 +184,7 @@ export function toggleEngine(player: alt.Player) {
 
     const rebarVehicle = Rebar.document.vehicle.useVehicle(playersVehicle).get();
 
-    if (!rebarVehicle) {
+    if (!rebarVehicle || !rebarVehicle.ascendedFuel) {
         Rebar.vehicle.useVehicle(playersVehicle).toggleEngine();
         return;
     }
@@ -228,7 +228,7 @@ export function toggleEngine(player: alt.Player) {
 export function toggleEngineWithoutPlayer(vehicle: alt.Vehicle) {
     const rebarVehicle = Rebar.document.vehicle.useVehicle(vehicle).get();
 
-    if (!rebarVehicle) {
+    if (!rebarVehicle || !rebarVehicle.ascendedFuel) {
         Rebar.vehicle.useVehicle(vehicle).toggleEngine();
         return;
     }

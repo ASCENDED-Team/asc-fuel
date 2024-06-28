@@ -28,7 +28,7 @@ const getFuelData = async (vehicle: alt.Vehicle) => {
 async function updateVehicleFuelData(player: alt.Player) {
     if (FUEL_SETTINGS.AscHUD) {
         const fuelCalc = await getFuelData(player.vehicle);
-        HudAPI.pushFuel(player, fuelCalc);
+        HudAPI.pushData(player, HudAPI.GetHUDEvents().WebView.PUSH_FUEL, fuelCalc);
     }
 }
 

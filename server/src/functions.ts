@@ -153,7 +153,6 @@ export async function setVehicleConsumptionRates() {
     for (const veh of vehicles) {
         const model = veh.model;
         const data = consumptionData[model];
-        console.log(JSON.stringify(data, undefined, 4));
         try {
             const vehicleDocument = Rebar.document.vehicle.useVehicle(veh);
 

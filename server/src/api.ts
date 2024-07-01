@@ -26,6 +26,7 @@ function useFuelAPI() {
                     consumption: 0,
                     max: 0,
                     type: '',
+                    typeTanked: '',
                 },
             });
             await setConsumptionRates();

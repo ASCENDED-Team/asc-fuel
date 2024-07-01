@@ -19,7 +19,7 @@ export const FUEL_SETTINGS = {
     AscNotification: true,
     Debug: true,
     DefaultConsumption: 0.003,
-    DefaultFuel: FUEL_TYPES.Diesel,
+    DefaultFuel: FUEL_TYPES.Diesel.name,
     DefaultMax: 30,
     enableSound: false,
 };

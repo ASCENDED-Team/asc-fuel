@@ -141,6 +141,7 @@ async function breakEngine(player: alt.Player, vehicle: alt.Vehicle) {
         }
     }
 }
+
 export async function setVehicleConsumptionRates() {
     const vehicles = alt.Vehicle.all;
 
@@ -151,26 +152,39 @@ export async function setVehicleConsumptionRates() {
 
     for (const veh of vehicles) {
         const model = veh.model;
-        const data = consumptionData[model] || {
-            consume: FUEL_SETTINGS.DefaultConsumption,
-            maxFuel: FUEL_SETTINGS.DefaultMax,
-            type: FUEL_SETTINGS.DefaultFuel,
-        };
-
+        const data = consumptionData[model];
+        console.log(JSON.stringify(data, undefined, 4));
         try {
             const vehicleDocument = Rebar.document.vehicle.useVehicle(veh);
 
-            if (vehicleDocument) {
-                alt.setTimeout(async () => {
-                    await vehicleDocument.setBulk({
-                        ascendedFuel: {
-                            consumption: data.consume,
-                            max: data.maxFuel,
-                            type: data.type.name,
-                            typeTanked: data.type.name,
-                        },
-                    });
-                }, 250);
+            if (data) {
+                await new Promise<void>((resolve) => {
+                    alt.setTimeout(async () => {
+                        await vehicleDocument.setBulk({
+                            ascendedFuel: {
+                                consumption: data.consume,
+                                max: data.maxFuel,
+                                type: data.type,
+                                typeTanked: data.type,
+                            },
+                        });
+                        resolve();
+                    }, 250);
+                });
+            } else {
+                await new Promise<void>((resolve) => {
+                    alt.setTimeout(async () => {
+                        await vehicleDocument.setBulk({
+                            ascendedFuel: {
+                                consumption: FUEL_SETTINGS.DefaultConsumption,
+                                max: FUEL_SETTINGS.DefaultMax,
+                                type: FUEL_SETTINGS.DefaultFuel,
+                                typeTanked: FUEL_SETTINGS.DefaultFuel,
+                            },
+                        });
+                        resolve();
+                    }, 250);
+                });
             }
         } catch (error) {
             console.error(`Failed to update vehicle model ${model}:`, error);

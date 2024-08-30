@@ -15,7 +15,7 @@ export const FUEL_TYPES = {
 
 export const FUEL_SETTINGS = {
     checkForUpdates: true,
-    AscHUD: true,
+    AscHUD: false,
     AscNotification: true,
     Debug: true,
     DefaultConsumption: 0.003,

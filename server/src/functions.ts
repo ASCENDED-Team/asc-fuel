@@ -358,7 +358,9 @@ export async function refillClosestVehicle(player: alt.Player, amount: number, t
         const maxFuel = vehicleDocument.ascendedFuel.max;
         const newFuel = parseFloat(Math.min(document.getField('fuel') + amount, maxFuel).toFixed(2));
 
-        vehicleDocument.ascendedFuel.typeTanked = type;
+        vehicleDocument.ascendedFuel.typeTanked =
+            vehicleDocument.ascendedFuel.type !== type ? type : vehicleDocument.ascendedFuel.typeTanked;
+
         document.set('fuel', newFuel);
         document.setBulk({ ascendedFuel: vehicleDocument.ascendedFuel });
 

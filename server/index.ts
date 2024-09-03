@@ -29,6 +29,12 @@ async function updateVehicleFuelData(player: alt.Player) {
         const fuelCalc = await getFuelData(player.vehicle);
         HudAPI.pushData(player, HudAPI.GetHUDEvents().WebView.PUSH_FUEL, fuelCalc, true);
     }
+
+    if (FUEL_SETTINGS.ASCHUDPro) {
+        const HudAPI = await useApi().getAsync('ascended-hudPro-api');
+        const fuelCalc = await getFuelData(player.vehicle);
+        HudAPI.pushData(player, HudAPI.GetHUDEvents().ToWebview.PushFuel, fuelCalc, true);
+    }
 }
 
 alt.setInterval(async () => {
@@ -50,7 +56,7 @@ alt.setTimeout(async () => {
 
 // Checks for updates...
 if (FUEL_SETTINGS.checkForUpdates) {
-    const fuelVersion = 'v1.04';
+    const fuelVersion = 'v1.05';
     async function requestLatestVersion() {
         /* 
         ASCENDED-Team API Key. This will only work for our plugins.

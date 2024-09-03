@@ -7,7 +7,7 @@ import { FUEL_SETTINGS } from './config.js';
 const FuelAPI = await useApi().getAsync('ascended-fuel-api');
 
 useKeybinder().on(88, (player: alt.Player) => {
-    FuelAPI.toggleVehicleEngine(player);
+    FuelAPI.vehicle.toggleEngine(player);
 });
 
 useKeybinder().on(66, async (player: alt.Player) => {

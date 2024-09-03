@@ -17,6 +17,7 @@ function useFuelAPI() {
         setConsumptionRates: setVehicleConsumptionRates,
         getFuelTypes: getFuelTypes,
     };
+
     const vehicle = {
         createPropertie: createAscendedFuelPropertie,
         toggleEngine: toggleEngine,

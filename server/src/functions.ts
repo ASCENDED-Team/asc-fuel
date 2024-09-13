@@ -1,22 +1,21 @@
 import * as alt from 'alt-server';
 import { useRebar } from '@Server/index.js';
 import { useApi } from '@Server/api/index.js';
-import { FUEL_SETTINGS, getVehicleConsumption } from './config.js';
+import { FUEL_SETTINGS, getVehicleConsumption, FUEL_TYPES } from './config.js';
 
 const Rebar = useRebar();
 const API = useApi();
 
-interface VehicleData {
+interface VehicleFuelData {
     position: alt.Vector3;
     fuel: number;
-    consumptionRate: number;
     timestamp: number;
 }
 
-const vehicleData = new Map<number, VehicleData>();
-const timeoutSet = new Set<number>();
+const vehicleFuelData = new Map<number, VehicleFuelData>();
+const engineBreakdownTimers = new Set<number>();
 
-let NotificationAPI: Awaited<{
+let NotificationAPI: {
     create: (
         player: alt.Player,
         notification: {
@@ -29,7 +28,7 @@ let NotificationAPI: Awaited<{
         },
     ) => void;
     type: () => { info: string; error: string; warning: string; success: string };
-}> = null;
+} | null = null;
 
 async function initializeNotificationAPI() {
     if (FUEL_SETTINGS.AscNotification) {
@@ -43,27 +42,38 @@ function handleError(error: Error, context: string) {
     console.error(`[Ascended Fuel] Error in ${context}:`, error);
 }
 
+/**
+ * Creates Ascended Fuel properties on a vehicle.
+ * @param {alt.Vehicle} vehicle - The vehicle to modify.
+ */
 export async function createAscendedFuelPropertie(vehicle: alt.Vehicle) {
     try {
         const vehicleDocument = Rebar.document.vehicle.useVehicle(vehicle);
+        const modelName = Rebar.utility.vehicleHashes.getNameFromHash(vehicle.model).toLowerCase();
+        const { consume, maxFuel, type } = getVehicleConsumption(modelName);
+
         await vehicleDocument.setBulk({
-            fuel: 30,
+            fuel: maxFuel,
             ascendedFuel: {
-                consumption: 0,
-                max: 0,
-                type: '',
-                typeTanked: '',
+                consumption: consume,
+                max: maxFuel,
+                type: type || FUEL_SETTINGS.DefaultFuel,
+                typeTanked: type || FUEL_SETTINGS.DefaultFuel,
             },
         });
-        await setVehicleConsumptionRates();
+
         console.log(
-            `Added ascended fuel properties for Vehicle Model: ${Rebar.utility.vehicleHashes.getNameFromHash(vehicle.model)} | Fuel: ${vehicleDocument.getField('fuel')}`,
+            `Added ascended fuel properties for Vehicle Model: ${modelName} | Fuel: ${vehicleDocument.getField('fuel')}`,
         );
     } catch (error) {
-        console.error('Error while setting ASCENDED-Fuel Properties:', error);
+        handleError(error, `createAscendedFuelPropertie for model ${vehicle.model}`);
     }
 }
 
+/**
+ * Starts tracking fuel consumption for a player's vehicle.
+ * @param {alt.Player} player - The player whose vehicle to track.
+ */
 export function startTracking(player: alt.Player) {
     const vehicle = player.vehicle;
     if (!vehicle) return;
@@ -71,48 +81,40 @@ export function startTracking(player: alt.Player) {
     const rebarDocument = Rebar.document.vehicle.useVehicle(vehicle).get();
     if (!rebarDocument) return;
 
-    vehicleData.set(vehicle.id, {
+    vehicleFuelData.set(vehicle.id, {
         position: vehicle.pos,
         fuel: rebarDocument.fuel,
-        consumptionRate: rebarDocument.ascendedFuel.consumption,
         timestamp: Date.now(),
     });
 }
 
+/**
+ * Updates the fuel consumption for a player's vehicle.
+ * @param {alt.Player} player - The player whose vehicle fuel to update.
+ */
 export async function updateFuelConsumption(player: alt.Player): Promise<void> {
     try {
         const vehicle = player.vehicle;
         if (!vehicle) return;
 
-        const rebarVehicle = Rebar.document.vehicle.useVehicle(vehicle).get();
-        if (!rebarVehicle) return;
+        const currentData = vehicleFuelData.get(vehicle.id);
+        if (!currentData) return;
 
-        const initialData = vehicleData.get(vehicle.id);
-        if (!initialData) return;
+        const distanceTraveled = calculateDistanceTraveled(vehicle, currentData.position);
+        const timeElapsed = (Date.now() - currentData.timestamp) / 1000;
 
-        const { position: initialPos, fuel: initialFuel, timestamp: initialTime } = initialData;
-        const currentPos = vehicle.pos;
-        const currentTime = Date.now();
+        if (distanceTraveled <= 0 || timeElapsed <= 0) return;
 
-        const distance = Rebar.utility.vector.distance(currentPos, initialPos);
-        const timeElapsed = (currentTime - initialTime) / 1000;
-        if (timeElapsed <= 0) return;
+        const speed = distanceTraveled / timeElapsed;
+        const fuelConsumed = await calculateFuelConsumed(vehicle, distanceTraveled, speed);
+        const remainingFuel = Math.max(0, currentData.fuel - fuelConsumed);
 
-        const speed = distance / timeElapsed;
-        if (distance === 0 || speed === 0) return;
-
-        const baseFuelConsumptionRate = await getVehicleFuelConsumption(vehicle);
-        const adjustedFuelConsumptionRate = baseFuelConsumptionRate * (1 + speed / 100);
-        const fuelConsumed = distance * adjustedFuelConsumptionRate;
-        const remainingFuel = Math.max(0, initialFuel - fuelConsumed);
+        await updateVehicleFuel(vehicle, remainingFuel);
+        updateVehicleData(vehicle, vehicle.pos, remainingFuel, Date.now());
 
         if (remainingFuel <= 0 && vehicle.engineOn) {
             await handleOutOfFuel(player, vehicle);
-            return;
         }
-
-        await updateVehicleFuel(vehicle, remainingFuel);
-        updateVehicleData(vehicle, currentPos, remainingFuel, currentTime);
 
         await checkFuelTypeMismatch(player, vehicle);
     } catch (error) {
@@ -120,8 +122,37 @@ export async function updateFuelConsumption(player: alt.Player): Promise<void> {
     }
 }
 
+/**
+ * Calculates the distance traveled by a vehicle.
+ * @param {alt.Vehicle} vehicle - The vehicle.
+ * @param {alt.Vector3} lastPosition - The last recorded position of the vehicle.
+ * @returns {number} The distance traveled in meters.
+ */
+function calculateDistanceTraveled(vehicle: alt.Vehicle, lastPosition: alt.Vector3): number {
+    return Rebar.utility.vector.distance(vehicle.pos, lastPosition);
+}
+
+/**
+ * Calculates the fuel consumed by a vehicle based on distance and speed.
+ * @param {alt.Vehicle} vehicle - The vehicle.
+ * @param {number} distance - The distance traveled in meters.
+ * @param {number} speed - The speed of the vehicle in meters per second.
+ * @returns {Promise<number>} The amount of fuel consumed.
+ */
+async function calculateFuelConsumed(vehicle: alt.Vehicle, distance: number, speed: number): Promise<number> {
+    const baseConsumptionRate = await getVehicleFuelConsumption(vehicle);
+    const adjustedConsumptionRate = baseConsumptionRate * (1 + speed / 100);
+    return distance * adjustedConsumptionRate;
+}
+
+/**
+ * Handles the vehicle running out of fuel.
+ * @param {alt.Player} player - The player driving the vehicle.
+ * @param {alt.Vehicle} vehicle - The vehicle.
+ */
 async function handleOutOfFuel(player: alt.Player, vehicle: alt.Vehicle) {
     await toggleEngineWithoutPlayer(vehicle);
+
     if (FUEL_SETTINGS.AscNotification && NotificationAPI) {
         NotificationAPI.create(player, {
             icon: '⛽',
@@ -130,73 +161,105 @@ async function handleOutOfFuel(player: alt.Player, vehicle: alt.Vehicle) {
             message: 'Your vehicle ran out of fuel.',
         });
     }
+
     await updateVehicleFuel(vehicle, 0);
     updateVehicleData(vehicle, vehicle.pos, 0, Date.now());
 }
 
+/**
+ * Updates the fuel level of a vehicle in its document.
+ * @param {alt.Vehicle} vehicle - The vehicle.
+ * @param {number} fuel - The new fuel level.
+ */
 async function updateVehicleFuel(vehicle: alt.Vehicle, fuel: number) {
     await Rebar.document.vehicle.useVehicle(vehicle).set('fuel', parseFloat(fuel.toFixed(2)));
 }
 
+/**
+ * Updates the vehicle data in the `vehicleFuelData` map.
+ * @param {alt.Vehicle} vehicle - The vehicle.
+ * @param {alt.Vector3} position - The current position of the vehicle.
+ * @param {number} fuel - The current fuel level.
+ * @param {number} timestamp - The current timestamp.
+ */
 function updateVehicleData(vehicle: alt.Vehicle, position: alt.Vector3, fuel: number, timestamp: number) {
-    vehicleData.set(vehicle.id, { position, fuel, consumptionRate: 0, timestamp });
+    vehicleFuelData.set(vehicle.id, { position, fuel, timestamp });
 }
 
+/**
+ * Checks for fuel type mismatch and handles engine breakdown.
+ * @param {alt.Player} player - The player driving the vehicle.
+ * @param {alt.Vehicle} vehicle - The vehicle.
+ */
 async function checkFuelTypeMismatch(player: alt.Player, vehicle: alt.Vehicle) {
     const ascendedFuel = await getAscendedFuel(vehicle);
+
     if (ascendedFuel && ascendedFuel.typeTanked !== ascendedFuel.type) {
-        if (!timeoutSet.has(vehicle.id)) {
-            timeoutSet.add(vehicle.id);
-            setTimeout(() => {
-                breakEngine(player, vehicle);
-                timeoutSet.delete(vehicle.id);
-            }, 2000);
+        if (!engineBreakdownTimers.has(vehicle.id)) {
+            engineBreakdownTimers.add(vehicle.id);
+
+            const interval = alt.setInterval(async () => {
+                const currentHealth = vehicle.engineHealth;
+                const newHealth = Math.max(0, currentHealth - 25);
+
+                vehicle.engineHealth = newHealth;
+
+                if (newHealth <= 0) {
+                    alt.clearInterval(interval);
+                    await breakEngine(player, vehicle);
+                    engineBreakdownTimers.delete(vehicle.id);
+                }
+            }, 1000);
+        }
+    } else {
+        if (vehicle.engineHealth < 1000) {
+            vehicle.engineHealth = Math.min(vehicle.engineHealth + 1, 1000);
         }
     }
 }
 
-export async function setVehicleConsumptionRates() {
-    const vehicles = alt.Vehicle.all;
+/**
+ * Repairs the fuel type mismatch in a vehicle.
+ * @param {alt.Vehicle} vehicle - The vehicle to repair.
+ */
+export async function repairFuelTypeMismatch(vehicle: alt.Vehicle) {
+    const vehicleDoc = Rebar.document.vehicle.useVehicle(vehicle);
+    const document = vehicleDoc.get();
 
-    for (const vehicle of vehicles) {
-        try {
-            const vehicleDocument = Rebar.document.vehicle.useVehicle(vehicle);
-            const config = getVehicleConsumption(vehicle.model);
+    if (!document || !document.ascendedFuel) return;
 
-            await vehicleDocument.setBulk({
-                ascendedFuel: {
-                    consumption: config.consume,
-                    max: config.maxFuel,
-                    type: config.type || FUEL_SETTINGS.DefaultFuel,
-                    typeTanked: config.type || FUEL_SETTINGS.DefaultFuel,
-                },
-            });
-        } catch (error) {
-            handleError(error, `setVehicleConsumptionRates for model ${vehicle.model}`);
-        }
-    }
+    document.ascendedFuel.typeTanked = document.ascendedFuel.type;
+    await vehicleDoc.set('ascendedFuel', document.ascendedFuel);
+
+    // Optionally: You can add logic here to:
+    // - Charge the mechanic a repair fee
+    // - Play a repair animation/sound
+    // - Notify the mechanic that the repair is complete
+
+    console.log(`Fuel type mismatch repaired for vehicle ${vehicle.id}`);
 }
 
+/**
+ * Toggles the engine of a vehicle for a player.
+ * @param {alt.Player} player - The player attempting to toggle the engine.
+ */
 export async function toggleEngine(player: alt.Player) {
-    const playersVehicle = player.vehicle;
-    if (!playersVehicle || player.seat !== 1) return;
+    const vehicle = player.vehicle;
+    if (!vehicle || player.seat !== 1) return;
 
-    const rebarVehicle = Rebar.document.vehicle.useVehicle(playersVehicle).get();
+    const rebarVehicle = Rebar.document.vehicle.useVehicle(vehicle).get();
     if (!rebarVehicle || !rebarVehicle.ascendedFuel) {
-        Rebar.vehicle.useVehicle(playersVehicle).toggleEngine();
+        Rebar.vehicle.useVehicle(vehicle).toggleEngine();
         return;
     }
 
-    if (
-        playersVehicle.hasStreamSyncedMeta('engineIsDisabled') &&
-        playersVehicle.getStreamSyncedMeta('engineIsDisabled')
-    ) {
+    if (vehicle.hasStreamSyncedMeta('engineIsDisabled') && vehicle.getStreamSyncedMeta('engineIsDisabled')) {
         return;
     }
 
     const fuel = rebarVehicle.fuel;
 
-    if (!playersVehicle.engineOn && fuel <= 0) {
+    if (!vehicle.engineOn && fuel <= 0) {
         if (FUEL_SETTINGS.AscNotification && NotificationAPI) {
             NotificationAPI.create(player, {
                 icon: '⛽',
@@ -212,13 +275,17 @@ export async function toggleEngine(player: alt.Player) {
         Rebar.player.useAudio(player).playSound(`/sounds/engine.ogg`);
     }
 
-    for (const _player of Object.values(playersVehicle.passengers)) {
+    for (const _player of Object.values(vehicle.passengers)) {
         alt.emitClient(_player, 'ResetRPM');
     }
 
-    Rebar.vehicle.useVehicle(playersVehicle).toggleEngineAsPlayer(player);
+    Rebar.vehicle.useVehicle(vehicle).toggleEngineAsPlayer(player);
 }
 
+/**
+ * Toggles the engine of a vehicle without a player directly interacting with it.
+ * @param {alt.Vehicle} vehicle - The vehicle.
+ */
 export async function toggleEngineWithoutPlayer(vehicle: alt.Vehicle) {
     const rebarVehicle = Rebar.document.vehicle.useVehicle(vehicle).get();
     if (!rebarVehicle || !rebarVehicle.ascendedFuel) {
@@ -246,10 +313,17 @@ export async function toggleEngineWithoutPlayer(vehicle: alt.Vehicle) {
     Rebar.vehicle.useVehicle(vehicle).toggleEngine();
 }
 
+/**
+ * Breaks the engine of a vehicle due to fuel type mismatch.
+ * @param {alt.Player} player - The player driving the vehicle.
+ * @param {alt.Vehicle} vehicle - The vehicle.
+ */
 async function breakEngine(player: alt.Player, vehicle: alt.Vehicle) {
     await toggleEngineWithoutPlayer(vehicle);
+
     if (FUEL_SETTINGS.AscNotification && NotificationAPI) {
         const ascendedFuel = await getAscendedFuel(vehicle);
+
         if (ascendedFuel) {
             NotificationAPI.create(player, {
                 icon: '⚠️',
@@ -261,11 +335,16 @@ async function breakEngine(player: alt.Player, vehicle: alt.Vehicle) {
     }
 }
 
-// * Use this Section for Custom Fuelstations - Or if you use ASC-Fuel Stations dont worry about it. * //
+/**
+ * Refills the fuel of a player's vehicle.
+ * @param {alt.Player} player - The player whose vehicle to refuel.
+ * @param {number} [amount] - The amount of fuel to add (defaults to filling the tank).
+ */
 export async function refillVehicle(player: alt.Player, amount?: number) {
-    if (!player.vehicle) return;
+    const vehicle = player.vehicle;
+    if (!vehicle) return;
 
-    const vehicleDoc = Rebar.document.vehicle.useVehicle(player.vehicle);
+    const vehicleDoc = Rebar.document.vehicle.useVehicle(vehicle);
     const document = vehicleDoc.get();
 
     if (!document || !document.ascendedFuel) return;
@@ -280,8 +359,7 @@ export async function refillVehicle(player: alt.Player, amount?: number) {
         ascendedFuel: { ...document.ascendedFuel },
     });
 
-    updateVehicleData(player.vehicle, player.vehicle.pos, newFuel, Date.now());
-    await updateFuelConsumption(player);
+    updateVehicleData(vehicle, vehicle.pos, newFuel, Date.now());
 
     if (FUEL_SETTINGS.AscNotification && NotificationAPI) {
         NotificationAPI.create(player, {
@@ -293,7 +371,19 @@ export async function refillVehicle(player: alt.Player, amount?: number) {
     }
 }
 
-export async function refillClosestVehicle(player: alt.Player, amount: number, type?: string, duration = 5000) {
+/**
+ * Refills the closest vehicle to a player.
+ * @param {alt.Player} player - The player.
+ * @param {number} amount - The amount of fuel to add.
+ * @param {string} [type] - The type of fuel to add.
+ * @param {number} [duration=5000] - The duration of the refuel animation in milliseconds.
+ */
+export async function refillClosestVehicle(
+    player: alt.Player,
+    amount: number,
+    type?: string,
+    duration: number = 5000,
+): Promise<void> {
     const closeVehicle = Rebar.get.useVehicleGetter().closestVehicle(player, 5);
     if (!closeVehicle || player.vehicle) return;
 
@@ -307,8 +397,9 @@ export async function refillClosestVehicle(player: alt.Player, amount: number, t
         const maxFuel = vehicleDocument.ascendedFuel.max;
         const newFuel = parseFloat(Math.min(document.getField('fuel') + amount, maxFuel).toFixed(2));
 
-        vehicleDocument.ascendedFuel.typeTanked =
-            vehicleDocument.ascendedFuel.type !== type ? type : vehicleDocument.ascendedFuel.typeTanked;
+        if (type) {
+            vehicleDocument.ascendedFuel.typeTanked = type;
+        }
 
         await document.setBulk({
             fuel: newFuel,
@@ -321,27 +412,29 @@ export async function refillClosestVehicle(player: alt.Player, amount: number, t
     }, duration);
 }
 
-export async function getVehicleFuelType(veh: alt.Vehicle) {
+// Getter functions for various vehicle fuel properties
+
+export async function getVehicleFuelType(veh: alt.Vehicle): Promise<string | null> {
     const rebarVehicle = Rebar.document.vehicle.useVehicle(veh).get();
     return rebarVehicle?.ascendedFuel?.type || null;
 }
 
-export async function getVehicleFuelTypeTanked(veh: alt.Vehicle) {
+export async function getVehicleFuelTypeTanked(veh: alt.Vehicle): Promise<string | null> {
     const rebarVehicle = Rebar.document.vehicle.useVehicle(veh).get();
     return rebarVehicle?.ascendedFuel?.typeTanked || null;
 }
 
-export async function getVehicleFuelConsumption(veh: alt.Vehicle) {
+export async function getVehicleFuelConsumption(veh: alt.Vehicle): Promise<number> {
     const rebarVehicle = Rebar.document.vehicle.useVehicle(veh).get();
     return rebarVehicle?.ascendedFuel?.consumption || 0;
 }
 
-export async function getVehicleMaxFuel(veh: alt.Vehicle) {
+export async function getVehicleMaxFuel(veh: alt.Vehicle): Promise<number> {
     const rebarVehicle = Rebar.document.vehicle.useVehicle(veh).get();
     return rebarVehicle?.ascendedFuel?.max || 0;
 }
 
-export async function getVehicleFuel(veh: alt.Vehicle) {
+export async function getVehicleFuel(veh: alt.Vehicle): Promise<number> {
     const rebarVehicle = Rebar.document.vehicle.useVehicle(veh).get();
     return rebarVehicle?.fuel || 0;
 }

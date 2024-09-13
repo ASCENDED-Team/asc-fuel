@@ -6,19 +6,18 @@ import {
     getVehicleMaxFuel,
     refillClosestVehicle,
     refillVehicle,
-    setVehicleConsumptionRates,
+    repairFuelTypeMismatch,
     toggleEngine,
     toggleEngineWithoutPlayer,
 } from './functions.js';
 import { FUEL_TYPES } from './config.js';
 
-function useFuelAPI() {
-    const global = {
-        setConsumptionRates: setVehicleConsumptionRates,
-        getFuelTypes: getFuelTypes,
+class FuelAPI {
+    public static global = {
+        getFuelTypes: this.getFuelTypes,
     };
 
-    const vehicle = {
+    public static vehicle = {
         createPropertie: createAscendedFuelPropertie,
         toggleEngine: toggleEngine,
         toggleEngineNoPlayer: toggleEngineWithoutPlayer,
@@ -27,22 +26,18 @@ function useFuelAPI() {
         refill: refillVehicle,
         refillClose: refillClosestVehicle,
         getMaxFuel: getVehicleMaxFuel,
+        repairMismatch: repairFuelTypeMismatch,
     };
 
-    function getFuelTypes() {
+    private static getFuelTypes() {
         return FUEL_TYPES;
     }
-
-    return {
-        global,
-        vehicle,
-    };
 }
 
 declare global {
     export interface ServerPlugin {
-        ['ascended-fuel-api']: ReturnType<typeof useFuelAPI>;
+        ['ascended-fuel-api']: typeof FuelAPI;
     }
 }
 
-useApi().register('ascended-fuel-api', useFuelAPI());
+useApi().register('ascended-fuel-api', FuelAPI);

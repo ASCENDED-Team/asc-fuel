@@ -1,11 +1,5 @@
 import * as alt from 'alt-server';
-import {
-    getVehicleFuel,
-    getVehicleMaxFuel,
-    setVehicleConsumptionRates,
-    startTracking,
-    updateFuelConsumption,
-} from './src/functions.js';
+import { getVehicleFuel, getVehicleMaxFuel, startTracking, updateFuelConsumption } from './src/functions.js';
 import './src/api.js';
 import './src/keybind.js';
 
@@ -24,13 +18,13 @@ const getFuelData = async (vehicle: alt.Vehicle) => {
 };
 
 async function updateVehicleFuelData(player: alt.Player) {
-    if (FUEL_SETTINGS.AscHUD) {
+    if (FUEL_SETTINGS.AscHUD && !FUEL_SETTINGS.ASCHUDPro) {
         const HudAPI = await useApi().getAsync('ascended-hud-api');
         const fuelCalc = await getFuelData(player.vehicle);
         HudAPI.pushData(player, HudAPI.GetHUDEvents().WebView.PUSH_FUEL, fuelCalc, true);
     }
 
-    if (FUEL_SETTINGS.ASCHUDPro) {
+    if (FUEL_SETTINGS.ASCHUDPro && !FUEL_SETTINGS.AscHUD) {
         const HudAPI = await useApi().getAsync('ascended-hudPro-api');
         const fuelCalc = await getFuelData(player.vehicle);
         HudAPI.pushData(player, HudAPI.GetHUDEvents().ToWebview.PushFuel, fuelCalc, true);
@@ -38,25 +32,15 @@ async function updateVehicleFuelData(player: alt.Player) {
 }
 
 alt.setInterval(async () => {
-    const playersWithVehicles = alt.Player.all.filter((player) => player.vehicle);
-
-    for (const player of playersWithVehicles) {
-        if (!player.vehicle.engineOn) {
-            return;
-        }
-
+    for (const player of alt.Player.all.filter((player) => player.vehicle && player.vehicle.engineOn)) {
         updateFuelConsumption(player);
         await updateVehicleFuelData(player);
     }
 }, 1000);
 
-alt.setTimeout(async () => {
-    await setVehicleConsumptionRates();
-}, 1500);
-
 // Checks for updates...
 if (FUEL_SETTINGS.checkForUpdates) {
-    const fuelVersion = 'v1.05';
+    const fuelVersion = 'v2.0.0';
     async function requestLatestVersion() {
         /* 
         ASCENDED-Team API Key. This will only work for our plugins.
@@ -80,15 +64,11 @@ if (FUEL_SETTINGS.checkForUpdates) {
                 isOutdated: boolean;
             } = await response.json();
 
-            if (data.isOutdated) {
-                alt.logWarning(
-                    `[ASCENDED-API]: Your plugin: ${data.repository} is outdated. Latest Commit: ${data.latestCommit} | Version (${data.release}) | ${data.releasedAt}`,
-                );
-            } else {
-                alt.logWarning(
-                    `[ASCENDED-API]: Your plugin: ${data.repository} is up to date. Latest Commit: ${data.latestCommit} | Version (${data.release}) | ${data.releasedAt}`,
-                );
-            }
+            const message = `[ASCENDED-API]: Your plugin: ${data.repository} is ${
+                data.isOutdated ? 'outdated' : 'up to date'
+            }. Latest Commit: ${data.latestCommit} | Version (${data.release}) | ${data.releasedAt}`;
+
+            data.isOutdated ? alt.logWarning(message) : alt.log(message);
         } catch (error) {
             if (error.response) {
                 alt.logWarning(

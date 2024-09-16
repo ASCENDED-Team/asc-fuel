@@ -1,7 +1,7 @@
 import * as alt from 'alt-server';
 import { useRebar } from '@Server/index.js';
 import { useApi } from '@Server/api/index.js';
-import { FUEL_SETTINGS, getVehicleConsumption, FUEL_TYPES } from './config.js';
+import { FUEL_SETTINGS, FuelSettings, getVehicleConsumption } from './config.js';
 
 const Rebar = useRebar();
 const API = useApi();
@@ -14,29 +14,6 @@ interface VehicleFuelData {
 
 const vehicleFuelData = new Map<number, VehicleFuelData>();
 const engineBreakdownTimers = new Set<number>();
-
-let NotificationAPI: {
-    create: (
-        player: alt.Player,
-        notification: {
-            icon: string;
-            title: string;
-            subTitle: string;
-            message: string;
-            duration?: number;
-            oggFile?: string;
-        },
-    ) => void;
-    type: () => { info: string; error: string; warning: string; success: string };
-} | null = null;
-
-async function initializeNotificationAPI() {
-    if (FUEL_SETTINGS.AscNotification) {
-        NotificationAPI = await API.getAsync('ascended-notification-api');
-    }
-}
-
-initializeNotificationAPI();
 
 function handleError(error: Error, context: string) {
     console.error(`[Ascended Fuel] Error in ${context}:`, error);
@@ -153,12 +130,13 @@ async function calculateFuelConsumed(vehicle: alt.Vehicle, distance: number, spe
 async function handleOutOfFuel(player: alt.Player, vehicle: alt.Vehicle) {
     await toggleEngineWithoutPlayer(vehicle);
 
-    if (FUEL_SETTINGS.AscNotification && NotificationAPI) {
-        NotificationAPI.create(player, {
+    if (FUEL_SETTINGS.AscNotification) {
+        const NotificationAPI = await API.getAsync('ascended-notification-api');
+        NotificationAPI.general.send(player, {
             icon: '⛽',
-            title: 'Ascended Fuel',
-            subTitle: 'Fuel ran out',
-            message: 'Your vehicle ran out of fuel.',
+            title: 'Out of Fuel',
+            message: 'Your vehicle has run out of fuel.',
+            duration: 5000,
         });
     }
 
@@ -260,12 +238,13 @@ export async function toggleEngine(player: alt.Player) {
     const fuel = rebarVehicle.fuel;
 
     if (!vehicle.engineOn && fuel <= 0) {
-        if (FUEL_SETTINGS.AscNotification && NotificationAPI) {
-            NotificationAPI.create(player, {
+        if (FUEL_SETTINGS.AscNotification) {
+            const NotificationAPI = await API.getAsync('ascended-notification-api');
+            NotificationAPI.general.send(player, {
+                title: 'Out of Fuel',
                 icon: '⛽',
-                title: 'Ascended Fuel',
-                subTitle: 'Empty Fuel',
-                message: `There's no fuel left in your current vehicle.`,
+                message: 'Your vehicle has run out of fuel.',
+                duration: 5000,
             });
         }
         return;
@@ -321,15 +300,15 @@ export async function toggleEngineWithoutPlayer(vehicle: alt.Vehicle) {
 async function breakEngine(player: alt.Player, vehicle: alt.Vehicle) {
     await toggleEngineWithoutPlayer(vehicle);
 
-    if (FUEL_SETTINGS.AscNotification && NotificationAPI) {
+    if (FUEL_SETTINGS.AscNotification) {
         const ascendedFuel = await getAscendedFuel(vehicle);
-
         if (ascendedFuel) {
-            NotificationAPI.create(player, {
-                icon: '⚠️',
-                title: 'Engine Failure',
-                subTitle: 'Fuel Type Mismatch',
+            const NotificationAPI = await API.getAsync('ascended-notification-api');
+            NotificationAPI.general.send(player, {
+                title: 'Fuel Type Mismatch',
+                icon: '⛽',
                 message: `Your vehicle engine has broken down due to fuel type mismatch. You've used ${ascendedFuel.typeTanked} instead of ${ascendedFuel.type}!`,
+                duration: 5000,
             });
         }
     }
@@ -361,12 +340,13 @@ export async function refillVehicle(player: alt.Player, amount?: number) {
 
     updateVehicleData(vehicle, vehicle.pos, newFuel, Date.now());
 
-    if (FUEL_SETTINGS.AscNotification && NotificationAPI) {
-        NotificationAPI.create(player, {
+    if (FUEL_SETTINGS.AscNotification) {
+        const NotificationAPI = await API.getAsync('ascended-notification-api');
+        NotificationAPI.general.send(player, {
+            title: 'Vehicle Refueled',
             icon: '⛽',
-            title: 'Ascended Fuel',
-            subTitle: 'Refueled',
             message: `Vehicle refueled. New fuel level: ${newFuel.toFixed(2)}L`,
+            duration: 5000,
         });
     }
 }

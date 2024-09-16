@@ -1,5 +1,4 @@
 import { useRebar } from '@Server/index.js';
-import * as alt from 'alt-server';
 
 const Rebar = useRebar();
 const ServerConfig = Rebar.useServerConfig();
@@ -28,7 +27,7 @@ export class FuelSettings {
     checkForUpdates = true;
     AscHUD = false;
     ASCHUDPro = true;
-    AscNotification = false;
+    AscNotification = true;
     Debug = true;
     DefaultConsumption = 0.002;
     DefaultFuel: FuelType = FuelType.Diesel;

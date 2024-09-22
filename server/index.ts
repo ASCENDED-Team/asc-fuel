@@ -1,5 +1,11 @@
 import * as alt from 'alt-server';
-import { getVehicleFuel, getVehicleMaxFuel, startTracking, updateFuelConsumption } from './src/functions.js';
+import {
+    createAscendedFuelPropertie,
+    getVehicleFuel,
+    getVehicleMaxFuel,
+    startTracking,
+    updateFuelConsumption,
+} from './src/functions.js';
 import './src/api.js';
 import './src/keybind.js';
 
@@ -87,3 +93,7 @@ if (FUEL_SETTINGS.checkForUpdates) {
         requestLatestVersion();
     }, 250);
 }
+
+alt.on('rebar:vehicleBound', async (vehicle: alt.Vehicle) => {
+    await createAscendedFuelPropertie(vehicle);
+});

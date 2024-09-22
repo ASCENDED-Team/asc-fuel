@@ -1,7 +1,7 @@
 import * as alt from 'alt-server';
 import { useRebar } from '@Server/index.js';
 import { useApi } from '@Server/api/index.js';
-import { FUEL_SETTINGS, FuelSettings, getVehicleConsumption } from './config.js';
+import { FUEL_SETTINGS, getVehicleConsumption } from './config.js';
 
 const Rebar = useRebar();
 const API = useApi();
@@ -28,6 +28,8 @@ export async function createAscendedFuelPropertie(vehicle: alt.Vehicle) {
         const vehicleDocument = Rebar.document.vehicle.useVehicle(vehicle);
         const modelName = Rebar.utility.vehicleHashes.getNameFromHash(vehicle.model).toLowerCase();
         const { consume, maxFuel, type } = getVehicleConsumption(modelName);
+
+        if (vehicleDocument.get().ascendedFuel) return;
 
         await vehicleDocument.setBulk({
             fuel: maxFuel,
@@ -258,7 +260,28 @@ export async function toggleEngine(player: alt.Player) {
         alt.emitClient(_player, 'ResetRPM');
     }
 
-    Rebar.vehicle.useVehicle(vehicle).toggleEngineAsPlayer(player);
+    const isOwned = Rebar.vehicle.useVehicle(vehicle).verifyOwner(player, false, false);
+    if (isOwned) {
+        Rebar.vehicle.useVehicle(vehicle).toggleEngine();
+    } else {
+        if (FUEL_SETTINGS.AscNotification) {
+            const NotificationAPI = await API.getAsync('ascended-notification-api');
+            NotificationAPI.general.send(player, {
+                title: 'Not Your Vehicle',
+                icon: '❌',
+                message: 'You do not own this vehicle.',
+                duration: 5000,
+            });
+        }
+    }
+}
+
+/**
+ * Stops tracking fuel consumption for a vehicle.
+ * @param {alt.Vehicle} vehicle - The vehicle to stop tracking.
+ */
+export function stopTracking(vehicle: alt.Vehicle) {
+    vehicleFuelData.delete(vehicle.id);
 }
 
 /**

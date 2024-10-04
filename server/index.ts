@@ -46,43 +46,42 @@ alt.setInterval(async () => {
 
 // Checks for updates...
 if (FUEL_SETTINGS.checkForUpdates) {
-    const fuelVersion = 'v2.0.0';
     async function requestLatestVersion() {
-        /* 
-        ASCENDED-Team API Key. This will only work for our plugins.
-        If you want to use our version check API - Feel free to contact us!
-        Our Discord: https://discord.gg/HTKM9NdhVa 
-        */
         const apiKey = 'qcsWTe_olrldSoni3K8AHkTeDCeu2rJiG5AKeqAWBBc';
-        const url = `http://api.rebar-ascended.dev:5072/versioncheck-api?url=ascended-team/asc-fuel&version=${fuelVersion}&apiKey=${apiKey}`;
+        const repoUrl = 'ascended-team/asc-fuel';
+        const apiUrl = `http://api.rebar-ascended.dev:5072/versioncheck-api?url=${repoUrl}&version=dummy&apiKey=${apiKey}`;
 
         try {
-            const response = await fetch(url);
+            const commitResponse = await fetch(`https://api.github.com/repos/${repoUrl}/commits/main`);
+            if (!commitResponse.ok) {
+                throw new Error(`Failed to fetch commit hash: ${commitResponse.status}`);
+            }
+            const commitData = await commitResponse.json();
+            const currentCommitHash = commitData.sha;
+
+            const response = await fetch(apiUrl);
             if (!response.ok) {
                 throw new Error(`Request failed with status ${response.status}`);
             }
-            const data: {
-                repository: string;
-                release: string;
-                releasedAt: string;
-                commitHash: string;
-                latestCommit: string;
-                isOutdated: boolean;
-            } = await response.json();
+            const data = await response.json();
 
-            const message = `[ASCENDED-API]: Your plugin: ${data.repository} is ${
-                data.isOutdated ? 'outdated' : 'up to date'
-            }. Latest Commit: ${data.latestCommit} | Version (${data.release}) | ${data.releasedAt}`;
+            let message = `[\x1b[35mASCENDED-Repository\x1b[0m] => \x1b[35m${data.repository}\x1b[0m is `;
+            if (currentCommitHash !== data.latestCommitHash) {
+                message += `\x1b[31mUPDATED\x1b[0m`;
+            } else {
+                message += '\x1b[32mUPTODATE\x1b[0m';
+            }
+            message += `. Latest Commit: ${data.latestCommit} (${data.latestCommitHash.slice(0, 5)})`;
 
-            data.isOutdated ? alt.logWarning(message) : alt.log(message);
+            currentCommitHash !== data.latestCommitHash ? alt.logWarning(message) : alt.log(message);
         } catch (error) {
             if (error.response) {
                 alt.logWarning(
-                    `[ASCENDED-Versioncheck-API] => No Response from Ascended API Server... Status: ${error.response.status}`,
+                    `[\x1b[35mASCENDED\x1b[0m-Versioncheck-API] => \x1b[31mNo Response from Ascended API Server...\x1b[0m Status: \x1b[35m${error.response.status}\x1b[0m`,
                 );
             } else {
                 alt.logWarning(
-                    `[ASCENDED-Versioncheck-API] => No Response from Ascended API Server... ${error.message}`,
+                    `[\x1b[35mASCENDED\x1b[0m-Versioncheck-API] => \x1b[31mNo Response from Ascended API Server...\x1b[0m \x1b[35m${error.message}\x1b[0m`,
                 );
             }
         }

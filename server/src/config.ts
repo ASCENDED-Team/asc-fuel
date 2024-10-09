@@ -25,8 +25,8 @@ export const FUEL_TYPES = new Map<FuelType, FuelProperties>([
 
 export class FuelSettings {
     checkForUpdates = true;
-    AscHUD = true;
-    ASCHUDPro = false;
+    AscHUD = false;
+    ASCHUDPro = true;
     AscNotification = true;
     Debug = true;
     DefaultConsumption = 0.002;
